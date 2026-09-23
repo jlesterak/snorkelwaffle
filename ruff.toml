@@ -1,0 +1,6 @@
+line-length = 120
+target-version = "py312"
+
+[lint.per-file-ignores]
+# The settings table reads better as dict(key=..., ...) rows.
+"snorkelwaffle/config.py" = ["C408"]

@@ -1,0 +1,30 @@
+# DockSTARTer: merge this into ~/.docker/compose/docker-compose.override.yml
+# (create the file if it doesn't exist), then run `ds -c up` or `ds -c`.
+#
+# Uses DockSTARTer's own variables, so paths and ownership match your other apps:
+#   DOCKER_VOLUME_CONFIG / DOCKER_VOLUME_STORAGE (older installs: DOCKERCONFDIR / DOCKERSTORAGEDIR),
+#   PUID, PGID, TZ.
+# Optional SNORKELWAFFLE_* variables below can go in ~/.docker/compose/.env.
+services:
+  snorkelwaffle:
+    image: ${SNORKELWAFFLE_IMAGE:-snorkelwaffle:latest}
+    container_name: snorkelwaffle
+    hostname: snorkelwaffle
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - LIBRARY_DIRS=${SNORKELWAFFLE_LIBRARY_DIRS:-/storage/media/podcasts}
+      - ABS_URL=${SNORKELWAFFLE_ABS_URL:-http://audiobookshelf:80}
+      - ABS_TOKEN=${SNORKELWAFFLE_ABS_TOKEN:-}
+      - ABS_LIBRARY_ID=${SNORKELWAFFLE_ABS_LIBRARY_ID:-}
+      - WEB_USERNAME=${SNORKELWAFFLE_WEB_USERNAME:-}
+      - WEB_PASSWORD=${SNORKELWAFFLE_WEB_PASSWORD:-}
+    volumes:
+      - ${DOCKER_VOLUME_CONFIG:-${DOCKERCONFDIR}}/snorkelwaffle:/config
+      - ${DOCKER_VOLUME_STORAGE:-${DOCKERSTORAGEDIR}}:/storage
+    ports:
+      - ${SNORKELWAFFLE_PORT_8484:-8484}:8484
+    cpus: ${SNORKELWAFFLE_CPUS:-1.0}
+    mem_limit: ${SNORKELWAFFLE_MEM_LIMIT:-512m}

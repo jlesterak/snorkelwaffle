@@ -1,0 +1,28 @@
+# Standalone example. For DockSTARTer, see dockstarter/README.md instead.
+services:
+  snorkelwaffle:
+    image: snorkelwaffle:latest
+    build: .
+    container_name: snorkelwaffle
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - LIBRARY_DIRS=/storage/media/podcasts
+      # Optional: let snorkelwaffle ask Audiobookshelf to rescan after cutting.
+      # Token: Audiobookshelf > Settings > Users > (admin) > API token.
+      - ABS_URL=http://audiobookshelf:80
+      - ABS_TOKEN=
+      # Optional web login (HTTP basic auth).
+      - WEB_USERNAME=
+      - WEB_PASSWORD=
+    volumes:
+      - ./config:/config
+      # Mount the storage at the same path Audiobookshelf sees it.
+      - /share/storage:/storage
+    ports:
+      - 8484:8484
+    # Keep a NAS responsive: one core at most, low memory ceiling.
+    cpus: 1.0
+    mem_limit: 512m

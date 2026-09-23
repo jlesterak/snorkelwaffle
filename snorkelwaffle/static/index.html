@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>snorkelwaffle</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#/"><img src="favicon.svg" alt="" width="22" height="22"> snorkelwaffle</a>
+  <nav>
+    <a href="#/" data-nav="overview">Overview</a>
+    <a href="#/review" data-nav="review">Review <span id="nav-pending" class="pill hidden"></span></a>
+    <a href="#/episodes" data-nav="episodes">Episodes</a>
+    <a href="#/settings" data-nav="settings">Settings</a>
+    <a href="#/log" data-nav="log">Log</a>
+  </nav>
+  <div id="worker-line" class="worker-line" title="Background worker"></div>
+</header>
+<main id="view" aria-live="polite"></main>
+<div id="toast" class="toast hidden" role="status"></div>
+<audio id="player" preload="none"></audio>
+<script src="app.js"></script>
+</body>
+</html>
