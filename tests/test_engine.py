@@ -51,7 +51,10 @@ class EngineTest(unittest.TestCase):
         shutil.rmtree(cls.tmp, ignore_errors=True)
 
     def make_engine(self):
+        # Each test gets its own copy of the library, since cutting edits it in place.
         data = tempfile.mkdtemp(dir=self.tmp, prefix="data-")
+        self.lib = os.path.join(data, "podcasts")
+        shutil.copytree(type(self).lib, self.lib)
         env = config.Env(library_dirs=[self.lib], data_dir=data, nice=0)
         db = Database(os.path.join(env.data_dir, "sw.db"))
         db.put_settings({"settle_minutes": 0})
@@ -168,6 +171,27 @@ class EngineTest(unittest.TestCase):
         self.assertEqual(len(exact), 4)
         for o in exact:
             self.assertAlmostEqual(o["end"] - o["start"], 30.0, delta=0.08)
+
+    def test_show_modes(self):
+        db, eng = self.make_engine()
+        s = db.put_settings({"auto_approve": "confident"})
+        eng.set_show_mode("Show B", "skip")
+        eng.set_show_mode("Show A", "review_only")
+        eng.scan(s)
+        self.run_queue(db, eng)
+        b = db.q("SELECT status FROM episodes WHERE show='Show B'")
+        self.assertEqual({r["status"] for r in b}, {"skipped"})
+        self.assertEqual(db.q1("SELECT count(*) n FROM occurrences o JOIN episodes e ON e.id=o.episode_id"
+                               " WHERE e.show='Show B'")["n"], 0)
+        # Everything left is heard only in a review-only show: nothing auto-approved.
+        self.assertEqual(db.q1("SELECT count(*) n FROM clips WHERE status='ad'")["n"], 0)
+        # Un-skipping re-queues Show B; its AD1 copy is then matched again.
+        eng.set_show_mode("Show B", "normal")
+        eng.apply_show_modes(s)
+        self.run_queue(db, eng)
+        ad1 = min(db.q("SELECT * FROM clips"), key=lambda c: abs(c["duration"] - 30))
+        self.assertEqual(ad1["show_count"], 2)
+        self.assertEqual(ad1["status"], "ad")  # now also heard in a normal show, with a high score
 
     def test_originals_cap(self):
         db, eng = self.make_engine()

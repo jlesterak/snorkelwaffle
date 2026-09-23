@@ -23,6 +23,12 @@
 
 ## [COMPLETED]
 
+- 2026-09-23: Per-show modes (normal / review only / skip) and a "maybe a
+  preview" hint.
+  - Tested on the Magic Tavern ad-free feed: its Patreon-episode preview is
+    now hinted, scored 45 and never auto-approved.
+  - Checked edge-seam (energy dip) as an automatic preview detector on real
+    episodes and rejected it. Previews are edited at pauses, just like ads.
 - 2026-09-23: Exact boundaries, ad confidence score, `confident`
   auto-approve, cross-show discovery, and a schema v2 migration.
   - Waveform alignment gives about ±50 ms on real episodes; tests assert

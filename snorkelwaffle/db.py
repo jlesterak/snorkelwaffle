@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS episodes (
     mtime REAL NOT NULL DEFAULT 0,
     duration REAL NOT NULL DEFAULT 0,
     fp BLOB,
-    status TEXT NOT NULL DEFAULT 'queued',   -- queued | analyzed | error | missing
+    status TEXT NOT NULL DEFAULT 'queued',   -- queued | analyzed | error | missing | skipped
     error TEXT,
     excluded INTEGER NOT NULL DEFAULT 0,     -- never cut this episode
     cut_failed INTEGER NOT NULL DEFAULT 0,
@@ -82,6 +82,11 @@ CREATE TABLE IF NOT EXISTS cuts (
     at REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS cuts_episode ON cuts (episode_id);
+
+CREATE TABLE IF NOT EXISTS shows (
+    show TEXT PRIMARY KEY,
+    mode TEXT NOT NULL DEFAULT 'normal'      -- normal | review_only | skip
+);
 
 CREATE TABLE IF NOT EXISTS originals (
     episode_id INTEGER PRIMARY KEY REFERENCES episodes(id) ON DELETE CASCADE,

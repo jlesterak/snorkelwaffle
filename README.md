@@ -104,6 +104,21 @@ in Settings. Everything else (analysis, discovery, review) keeps working.
 | `NICE` | `10` | CPU niceness for the worker and ffmpeg (IO always uses the idle class). |
 | `SW_<SETTING>` | (none) | Seeds a UI setting until it's changed in the UI, e.g. `SW_AUTO_APPROVE=multi_show`. |
 
+### Shows (web UI → Settings → Shows)
+
+Each show has a mode:
+
+| Mode | Behaviour | Good for |
+|---|---|---|
+| Normal | Clips are found, and can be auto-approved and cut. | Most feeds. |
+| Review only | Clips heard only in this show always wait for you. | Ad-free or Patreon feeds, where repeats are usually previews of other episodes or plugs. |
+| Skip | Never analysed, matched or cut. | Feeds you want left alone. |
+
+Previews of the show's own content can't be told apart from promos by audio
+alone; both are clean, edited inserts. So in normal feeds these clips are
+hinted *Maybe a preview* (only 2 episodes, odd length) and scored low, rather
+than guessed at.
+
 ### Settings (web UI)
 
 | Group | Settings |

@@ -191,9 +191,45 @@ class Engine:
         for path, row in known.items():
             if path not in seen and row["status"] != "missing" and row["library"] in scanned_roots:
                 self.db.x("UPDATE episodes SET status='missing' WHERE id=?", (row["id"],))
+        self.apply_show_modes()
         if queued:
             log.info("Scan queued %d episode(s)", queued)
         return queued
+
+    # -------------------------------------------------------------- show modes
+    SHOW_MODES = ("normal", "review_only", "skip")
+
+    def show_modes(self):
+        return {r["show"]: r["mode"] for r in self.db.q("SELECT show, mode FROM shows")}
+
+    def set_show_mode(self, show, mode):
+        if mode not in self.SHOW_MODES:
+            raise ValueError(f"mode must be one of {self.SHOW_MODES}")
+        self.db.x("INSERT INTO shows (show, mode) VALUES (?, ?) ON CONFLICT(show) DO UPDATE SET mode=excluded.mode",
+                  (show, mode))
+        log.info("Show %r set to %s", show, mode)
+
+    def apply_show_modes(self, settings=None):
+        """Park episodes of skipped shows; bring them back when un-skipped.
+
+        A skipped show is never analysed, matched against, or cut. Its
+        occurrences are dropped so clips found there stop counting it.
+        """
+        skip = [s for s, m in self.show_modes().items() if m == "skip"]
+        marks = ",".join("?" * len(skip))
+        touched = set()
+        with self.db.tx() as c:
+            if skip:
+                rows = c.execute(f"SELECT DISTINCT o.clip_id FROM occurrences o JOIN episodes e ON e.id=o.episode_id"
+                                 f" WHERE e.show IN ({marks})", skip).fetchall()
+                touched = {r["clip_id"] for r in rows}
+                c.execute(f"DELETE FROM occurrences WHERE episode_id IN (SELECT id FROM episodes WHERE show IN ({marks}))",
+                          skip)
+                c.execute(f"UPDATE episodes SET status='skipped' WHERE show IN ({marks}) AND status != 'missing'", skip)
+            c.execute(f"UPDATE episodes SET status='queued' WHERE status='skipped'"
+                      f"{f' AND show NOT IN ({marks})' if skip else ''}", skip)
+        if touched and settings:
+            self.update_clip_stats(touched, settings)
 
     # ------------------------------------------------------------------ analyse
     def next_queued(self):
@@ -484,6 +520,7 @@ class Engine:
 
     # ------------------------------------------------------- stats & auto rules
     def update_clip_stats(self, clip_ids, settings):
+        modes = self.show_modes()
         for cid in clip_ids:
             clip = self.db.q1("SELECT * FROM clips WHERE id=?", (cid,))
             if clip is None:
@@ -491,11 +528,14 @@ class Engine:
             rows = self.db.q("SELECT o.start, o.end, o.ber, e.show, e.duration, e.id FROM occurrences o"
                              " JOIN episodes e ON e.id=o.episode_id WHERE o.clip_id=?", (cid,))
             ep_count = len({r["id"] for r in rows})
-            show_count = len({r["show"] for r in rows})
+            shows = {r["show"] for r in rows}
+            show_count = len(shows)
             sugg = suggest(clip["duration"], rows, show_count, ep_count)
             score = ad_confidence(clip["duration"], rows, show_count, ep_count, sugg)
             status, decided_by, decided_at = clip["status"], clip["decided_by"], clip["decided_at"]
-            if status == "pending" and (sugg is None or sugg["kind"] != "theme"):
+            # Clips heard only in "review only" shows (e.g. ad-free feeds) always wait for a human.
+            review_only = bool(shows) and all(modes.get(s) == "review_only" for s in shows)
+            if status == "pending" and not review_only and (sugg is None or sugg["kind"] not in ("theme", "excerpt")):
                 mode = settings["auto_approve"]
                 if (mode == "multi_show" and show_count >= 2) or (
                         mode == "confident" and score >= settings["auto_approve_min_confidence"]):
@@ -645,12 +685,19 @@ def suggest(duration, occ_rows, show_count, ep_count):
         return {"kind": "theme", "reason": "same spot near the start of most episodes (intro?)"}
     if ep_count >= 3 and _mostly_fixed(from_end) and statistics.median(from_end) < 180:
         return {"kind": "theme", "reason": "same spot near the end of most episodes (outro?)"}
+    if ep_count == 2 and show_count == 1 and duration > 20 and not is_standard_ad_length(duration):
+        return {"kind": "excerpt",
+                "reason": "only in 2 episodes of one show, odd length: could be a preview or clip of the show itself"}
     if 12 <= duration <= 130 and spread > 30:
         return {"kind": "ad", "reason": "typical ad length and moves around between episodes"}
     return None
 
 
 STANDARD_AD_LENGTHS = (15, 30, 45, 60, 90, 120)
+
+
+def is_standard_ad_length(duration):
+    return any(abs(duration - n) <= 1.0 for n in STANDARD_AD_LENGTHS)
 
 
 def ad_confidence(duration, occ_rows, show_count, ep_count, sugg):
@@ -664,9 +711,11 @@ def ad_confidence(duration, occ_rows, show_count, ep_count, sugg):
     if sugg and sugg["kind"] == "theme":
         return 5
     score = 35
+    if sugg and sugg["kind"] == "excerpt":
+        score -= 10
     if show_count >= 2:
         score += 35 + 5 * min(3, show_count - 2)
-    if any(abs(duration - n) <= 1.0 for n in STANDARD_AD_LENGTHS):
+    if is_standard_ad_length(duration):
         score += 15
     elif 10 <= duration <= 130:
         score += 5

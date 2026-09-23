@@ -25,6 +25,14 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
   above it are cut automatically. Anything below, including clips heard only
   a couple of times, waits for review. Clips that look like intros or outros
   are never auto-approved.
+- Per-show modes in Settings → Shows:
+  - **Normal**;
+  - **Review only**: clips heard only in that show are never auto-approved,
+    for ad-free and Patreon feeds where repeats are usually previews or plugs;
+  - **Skip**: the show is never analysed, matched or cut.
+- "Maybe a preview" hint: a clip found in only 2 episodes of one show at a
+  non-standard length is flagged as a possible preview or excerpt of the show
+  itself. It loses 10 points and is never auto-approved.
 - Cross-show discovery: each new episode is also compared with a few episodes
   of other shows downloaded around the same time (default 4), to catch ads a
   network runs across several shows.

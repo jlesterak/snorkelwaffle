@@ -204,11 +204,11 @@ const reviewState = { status: "pending", sort: "confidence", show: "", offset: 0
 function suggestionTag(s) {
   if (!s) return "";
   const cls = s.kind === "ad" ? "ad" : s.kind === "theme" ? "theme" : "plain";
-  const label = s.kind === "ad" ? "Likely ad" : s.kind === "theme" ? "Likely intro/outro" : s.kind;
+  const label = { ad: "Likely ad", theme: "Likely intro/outro", excerpt: "Maybe a preview" }[s.kind] || s.kind;
   return `<span class="tag ${cls}" title="${esc(s.reason)}">${label}</span>`;
 }
 function confidenceTag(c) {
-  if (c.suggestion && c.suggestion.kind === "theme") return "";
+  if (c.suggestion && c.suggestion.kind === "theme") return "";  // intros/outros: an ad score would mislead
   const n = c.confidence ?? 0;
   const cls = n >= 85 ? "ad" : n >= 60 ? "pending" : "plain";
   return `<span class="tag ${cls}" title="How likely this is an ad (0-100). Used by 'confident' auto-approve.">Ad score ${n}</span>`;
@@ -416,6 +416,7 @@ function epStatus(e) {
   if (e.status === "error") return `<span class="tag ad" title="${esc(e.error)}">error</span>`;
   if (e.status === "missing") return `<span class="tag plain">missing</span>`;
   if (e.status === "queued") return `<span class="tag pending">queued</span>`;
+  if (e.status === "skipped") return `<span class="tag plain" title="This show is set to Skip">skipped</span>`;
   if (e.excluded) return `<span class="tag plain">excluded</span>`;
   if (e.removed_seconds > 0) return `<span class="tag keep">cut</span>`;
   return `<span class="tag plain">analysed</span>`;
@@ -500,7 +501,7 @@ async function renderEpisode(id) {
 
 // ---------------------------------------------------------------- settings
 async function renderSettings() {
-  const d = await api("/api/settings");
+  const [d, shows] = await Promise.all([api("/api/settings"), api("/api/shows")]);
   const values = { ...d.values };
   const groups = [...new Set(d.schema.map((s) => s.group))];
   const control = (s) => {
@@ -520,9 +521,23 @@ async function renderSettings() {
     </div></section>`).join("")}
     <div class="savebar"><button class="btn primary" type="submit" id="save" disabled>Save changes</button><span id="dirty" class="muted"></span></div>
     </form>
+    <h2>Shows</h2>
+    <p class="muted" style="margin-top:-4px"><strong>Review only</strong>: clips are found but never auto-cut (good for ad-free or Patreon feeds, where repeats are usually previews or plugs). <strong>Skip</strong>: never analysed, matched or cut.</p>
+    <div class="table-wrap"><table><thead><tr><th>Show</th><th class="num">Episodes</th><th>Mode</th></tr></thead>
+      <tbody>${shows.items.map((s) => `<tr><td>${esc(s.show)}</td><td class="num">${s.episodes}</td>
+        <td><select data-show="${esc(s.show)}" aria-label="Mode for ${esc(s.show)}">
+          ${[["normal", "Normal"], ["review_only", "Review only"], ["skip", "Skip"]].map(([v, l]) => `<option value="${v}" ${s.mode === v ? "selected" : ""}>${l}</option>`).join("")}
+        </select></td></tr>`).join("") || `<tr><td colspan="3" class="muted">No shows found yet.</td></tr>`}</tbody></table></div>
+
     <h2>Environment (read-only)</h2>
     <p class="muted" style="margin-top:-4px">Set these in docker-compose or DockSTARTer's <span class="mono">.env</span>. Any setting above can also be seeded with <span class="mono">SW_&lt;KEY&gt;</span>, e.g. <span class="mono">SW_AUTO_APPROVE=multi_show</span>, until it is changed here.</p>
     <div class="table-wrap"><table><tbody>${Object.entries(d.env).map(([k, v]) => `<tr><td class="mono">${esc(k)}</td><td class="mono">${esc(v)}</td></tr>`).join("")}</tbody></table></div>`;
+  $$("[data-show]").forEach((sel) => sel.onchange = async () => {
+    try {
+      await api("/api/shows", { method: "POST", body: { show: sel.dataset.show, mode: sel.value } });
+      toast(`${sel.dataset.show}: ${sel.options[sel.selectedIndex].text}`);
+    } catch (err) { toast(err.message, true); }
+  });
   const changed = {};
   const form = $("#settings-form");
   form.addEventListener("input", (e) => {

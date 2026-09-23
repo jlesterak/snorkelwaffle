@@ -54,6 +54,7 @@ class App:
         r("GET", r"/api/clips/(\d+)/preview", self.clip_preview)
         r("GET", r"/api/occurrences/(\d+)/audio", self.occurrence_audio)
         r("GET", r"/api/shows", self.list_shows)
+        r("POST", r"/api/shows", self.set_show_mode)
         r("GET", r"/api/episodes", self.list_episodes)
         r("GET", r"/api/episodes/(\d+)", self.get_episode)
         r("POST", r"/api/episodes/(\d+)/restore", self.restore_episode)
@@ -202,10 +203,23 @@ class App:
 
     # ---------------------------------------------------------------- episodes
     def list_shows(self, req):
-        rows = self.db.q("SELECT show, count(*) AS episodes, sum(removed_seconds) AS removed,"
-                         " sum(CASE WHEN status='queued' THEN 1 ELSE 0 END) AS queued FROM episodes"
-                         " GROUP BY show ORDER BY show COLLATE NOCASE")
+        rows = self.db.q("SELECT e.show, count(*) AS episodes, sum(e.removed_seconds) AS removed,"
+                         " sum(CASE WHEN e.status='queued' THEN 1 ELSE 0 END) AS queued,"
+                         " coalesce(s.mode, 'normal') AS mode FROM episodes e LEFT JOIN shows s ON s.show=e.show"
+                         " GROUP BY e.show ORDER BY e.show COLLATE NOCASE")
         return {"items": [dict(r) for r in rows]}
+
+    def set_show_mode(self, req):
+        body = req.json()
+        show = str(body.get("show", ""))
+        if not self.db.q1("SELECT 1 FROM episodes WHERE show=? LIMIT 1", (show,)):
+            raise HttpError(404, "no such show")
+        try:
+            self.engine.set_show_mode(show, body.get("mode"))
+        except ValueError as exc:
+            raise HttpError(400, str(exc)) from exc
+        self.worker.submit("apply_show_modes", self.db.get_settings())
+        return {"ok": True}
 
     def list_episodes(self, req):
         where, args = [], []

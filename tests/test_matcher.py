@@ -46,3 +46,16 @@ class MatcherTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HintTest(unittest.TestCase):
+    def test_excerpt_hint(self):
+        from snorkelwaffle.engine import ad_confidence, suggest
+        rows = [{"start": 100, "end": 157.6, "duration": 3000, "ber": 0.05, "id": 1},
+                {"start": 2000, "end": 2057.6, "duration": 3600, "ber": 0.05, "id": 2}]
+        sugg = suggest(57.6, rows, 1, 2)
+        self.assertEqual(sugg["kind"], "excerpt")
+        self.assertLess(ad_confidence(57.6, rows, 1, 2, sugg), 50)
+        # A real 60 s ad heard twice is not penalised.
+        rows60 = [dict(r, end=r["start"] + 60.0) for r in rows]
+        self.assertNotEqual(suggest(60.0, rows60, 1, 2)["kind"], "excerpt")
