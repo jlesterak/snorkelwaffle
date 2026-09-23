@@ -46,11 +46,8 @@ out. See [CREDITS.md](CREDITS.md) for tools that do it.
 
 ## Quick start (DockSTARTer)
 
-1. Build the image on the NAS, or anywhere you can move the image from:
-   ```sh
-   git clone <this repo> snorkelwaffle && cd snorkelwaffle
-   docker build -t snorkelwaffle:latest .
-   ```
+1. The image is published as `ghcr.io/jlesterak/snorkelwaffle` (amd64 and arm64).
+   Tags: `latest`, `0.1`, `0.1.0`. Pin a version with `SNORKELWAFFLE_IMAGE` if you prefer.
 2. Merge [`dockstarter/docker-compose.override.yml`](dockstarter/docker-compose.override.yml)
    into `~/.docker/compose/docker-compose.override.yml`.
 3. Optional: add the variables from [`dockstarter/env.example`](dockstarter/env.example)
@@ -134,6 +131,17 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 
 It needs Python 3.12 or later, ffmpeg, and either ffmpeg's chromaprint muxer
 or `fpcalc`.
+
+## Versioning and releases
+
+- Versions follow [SemVer](https://semver.org/), and changes are recorded in
+  [CHANGELOG.md](CHANGELOG.md).
+- To cut a release:
+  1. Bump `__version__` in `snorkelwaffle/__init__.py`.
+  2. Move the `Unreleased` notes into a new version section.
+  3. Commit and tag `vX.Y.Z`.
+- Pushing the tag builds and publishes the image and creates a GitHub Release.
+  CI refuses a tag that doesn't match `__version__`.
 
 ## License
 

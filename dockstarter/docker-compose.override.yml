@@ -7,7 +7,7 @@
 # Optional SNORKELWAFFLE_* variables below can go in ~/.docker/compose/.env.
 services:
   snorkelwaffle:
-    image: ${SNORKELWAFFLE_IMAGE:-snorkelwaffle:latest}
+    image: ${SNORKELWAFFLE_IMAGE:-ghcr.io/jlesterak/snorkelwaffle:latest}
     container_name: snorkelwaffle
     hostname: snorkelwaffle
     restart: unless-stopped

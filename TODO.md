@@ -13,8 +13,6 @@
 - Boundary refinement: after a fingerprint match, align the decoded audio
   (~8 kHz, ±3 s) around each edge to get cut points to tens of milliseconds.
   The ±1 s fingerprint resolution comes from chromaprint's ~2.6 s window.
-- Publish the image to a registry (GHCR) so the NAS can pull it rather than
-  build it. Needs a repo and push approval.
 - Smaller image: Alpine's ffmpeg pulls in ~250 MB of codec libraries. A minimal
   static ffmpeg build (mp3/aac/opus/flac only) could get it under ~120 MB.
 - Optional pluggable detectors for host-read ads (Whisper and an LLM, off by
@@ -27,6 +25,11 @@
   use.
 
 ## [COMPLETED]
+
+- 2026-09-23: GitHub repo, CI (ruff + pytest), and a tag-driven release
+  pipeline.
+  - Images go to `ghcr.io/jlesterak/snorkelwaffle`, multi-arch.
+  - Releases use SemVer, Keep a Changelog and Conventional Commits.
 
 - 2026-09-23: Initial build (v0.1.0).
   - Chromaprint fingerprinting (ffmpeg muxer or fpcalc).

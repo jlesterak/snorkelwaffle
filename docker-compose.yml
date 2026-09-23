@@ -1,8 +1,8 @@
 # Standalone example. For DockSTARTer, see dockstarter/README.md instead.
 services:
   snorkelwaffle:
-    image: snorkelwaffle:latest
-    build: .
+    image: ghcr.io/jlesterak/snorkelwaffle:latest
+    # build: .   # or build locally instead of pulling
     container_name: snorkelwaffle
     restart: unless-stopped
     environment:

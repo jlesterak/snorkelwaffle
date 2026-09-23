@@ -1,0 +1,67 @@
+name: Release
+
+# Push a SemVer tag (vMAJOR.MINOR.PATCH) to publish:
+#   ghcr.io/<owner>/snorkelwaffle:MAJOR.MINOR.PATCH, :MAJOR.MINOR, :latest
+# and a GitHub Release whose notes are that version's CHANGELOG.md section.
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag must match snorkelwaffle.__version__
+        run: |
+          code=$(python3 -c "import re;print(re.search(r'__version__ = \"(.+?)\"', open('snorkelwaffle/__init__.py').read()).group(1))")
+          test "v$code" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != __version__ $code"; exit 1; }
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: pip install -r requirements-dev.txt && python -m pytest -q
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/snorkelwaffle
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=snorkelwaffle
+            org.opencontainers.image.description=Finds audio repeated across podcast episodes (ads) and cuts it out. CPU-only, no cloud.
+            org.opencontainers.image.licenses=Unlicense
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: GitHub Release from CHANGELOG
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          awk -v v="$ver" '$0 ~ "^## \\[" v "\\]" {f=1; next} /^## \[/ {f=0} f' CHANGELOG.md > notes.md
+          printf '\n**Image:** `ghcr.io/%s/snorkelwaffle:%s`\n' "${{ github.repository_owner }}" "$ver" >> notes.md
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md
