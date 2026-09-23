@@ -65,6 +65,10 @@ class Worker(threading.Thread):
             os.setpriority(os.PRIO_PROCESS, threading.get_native_id(), max(0, self.engine.env.nice))
         except (OSError, AttributeError):
             pass
+        try:
+            self.engine.refresh_all_stats(self.db.get_settings())
+        except Exception:
+            log.exception("Could not refresh clip stats")
         while not self._stopping:
             try:
                 if not self._step():
@@ -119,6 +123,12 @@ class Worker(threading.Thread):
         if eng.has_unswept():
             self._set("matching new clips across the library")
             eng.sweep(settings, should_stop=lambda: not self.actions.empty() or self._stopping)
+            return True
+
+        row = eng.next_unrefined_clip()
+        if row:
+            self._set(f"refining boundaries of clip #{row['id']}")
+            eng.refine_clip(row["id"], settings)
             return True
 
         if settings["cutting_enabled"]:

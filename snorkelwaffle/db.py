@@ -8,7 +8,7 @@ import time
 
 from . import config
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -53,6 +53,9 @@ CREATE TABLE IF NOT EXISTS clips (
     episode_count INTEGER NOT NULL DEFAULT 0,
     show_count INTEGER NOT NULL DEFAULT 0,
     suggestion TEXT,
+    confidence INTEGER NOT NULL DEFAULT 0,   -- 0-100, how likely this is an ad
+    ref_path TEXT,                           -- edge audio for exact boundaries
+    refine_tried INTEGER NOT NULL DEFAULT 0,
     created_at REAL NOT NULL,
     decided_at REAL
 );
@@ -64,7 +67,8 @@ CREATE TABLE IF NOT EXISTS occurrences (
     episode_id INTEGER NOT NULL REFERENCES episodes(id) ON DELETE CASCADE,
     start REAL NOT NULL,
     end REAL NOT NULL,
-    ber REAL NOT NULL DEFAULT 0
+    ber REAL NOT NULL DEFAULT 0,
+    refined INTEGER NOT NULL DEFAULT 0       -- boundaries from waveform alignment
 );
 CREATE INDEX IF NOT EXISTS occ_clip ON occurrences (clip_id);
 CREATE INDEX IF NOT EXISTS occ_episode ON occurrences (episode_id);
@@ -94,7 +98,21 @@ class Database:
         self._local = threading.local()
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         self.conn.executescript(SCHEMA)  # executescript manages its own transaction
-        self.x("INSERT OR IGNORE INTO meta VALUES ('schema_version', ?)", (str(SCHEMA_VERSION),))
+        self._migrate()
+        self.x("INSERT OR REPLACE INTO meta VALUES ('schema_version', ?)", (str(SCHEMA_VERSION),))
+
+    def _migrate(self):
+        """Add columns introduced after v0.1.0 to existing databases."""
+        added = {
+            "clips": [("confidence", "INTEGER NOT NULL DEFAULT 0"), ("ref_path", "TEXT"),
+                      ("refine_tried", "INTEGER NOT NULL DEFAULT 0")],
+            "occurrences": [("refined", "INTEGER NOT NULL DEFAULT 0")],
+        }
+        for table, cols in added.items():
+            have = {r["name"] for r in self.q(f"PRAGMA table_info({table})")}
+            for name, ddl in cols:
+                if name not in have:
+                    self.x(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
 
     @property
     def conn(self):

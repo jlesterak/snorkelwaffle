@@ -33,6 +33,9 @@ function fmtDuration(sec) {
   const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
   return h ? `${h}h ${m}m` : `${m}m`;
 }
+function fmtClipLen(sec) {
+  return sec < 600 ? `${(sec || 0).toFixed(1)}s` : fmtDuration(sec);
+}
 function fmtBytes(b) {
   if (!b) return "0 B";
   const u = ["B", "KB", "MB", "GB", "TB"];
@@ -196,13 +199,24 @@ async function renderOverview() {
 }
 
 // ---------------------------------------------------------------- review
-const reviewState = { status: "pending", sort: "episodes", show: "", offset: 0, selected: 0, checked: new Set() };
+const reviewState = { status: "pending", sort: "confidence", show: "", offset: 0, selected: 0, checked: new Set() };
 
 function suggestionTag(s) {
   if (!s) return "";
   const cls = s.kind === "ad" ? "ad" : s.kind === "theme" ? "theme" : "plain";
   const label = s.kind === "ad" ? "Likely ad" : s.kind === "theme" ? "Likely intro/outro" : s.kind;
   return `<span class="tag ${cls}" title="${esc(s.reason)}">${label}</span>`;
+}
+function confidenceTag(c) {
+  if (c.suggestion && c.suggestion.kind === "theme") return "";
+  const n = c.confidence ?? 0;
+  const cls = n >= 85 ? "ad" : n >= 60 ? "pending" : "plain";
+  return `<span class="tag ${cls}" title="How likely this is an ad (0-100). Used by 'confident' auto-approve.">Ad score ${n}</span>`;
+}
+function timeRange(o) {
+  const t = `${fmtTime(o.start)}–${fmtTime(o.end)}`;
+  return o.refined ? `<span title="Exact: aligned on the audio (±0.05 s)">${t}</span>`
+                   : `<span title="Approximate: from fingerprints (±1 s)">≈ ${t}</span>`;
 }
 function statusTag(c) {
   const t = { pending: "To review", ad: "Ad", keep: "Keep" }[c.status];
@@ -216,7 +230,7 @@ function clipCard(c, i) {
     <input type="checkbox" aria-label="Select clip ${c.id}" data-check ${reviewState.checked.has(c.id) ? "checked" : ""}>
     ${c.has_preview ? playButton(`/api/clips/${c.id}/preview`, `Play clip ${c.id}`) : `<span></span>`}
     <div class="meta">
-      <div class="title"><a href="#/clips/${c.id}">${fmtDuration(c.duration)} clip</a> ${statusTag(c)} ${suggestionTag(c.suggestion)}</div>
+      <div class="title"><a href="#/clips/${c.id}">${fmtClipLen(c.duration)} clip</a> ${statusTag(c)} ${suggestionTag(c.suggestion)} ${confidenceTag(c)}</div>
       <div class="facts">In ${c.episode_count} episode${c.episode_count === 1 ? "" : "s"} · ${shows}${c.suggestion ? ` · ${esc(c.suggestion.reason)}` : ""}${c.note ? ` · “${esc(c.note)}”` : ""}</div>
     </div>
     <div class="actions">
@@ -244,7 +258,7 @@ async function renderReview() {
     <div class="tabs" role="tablist">${tab("pending", "To review", counts.pending)}${tab("ad", "Ads", counts.ad)}${tab("keep", "Kept", counts.keep)}${tab("all", "All", all)}</div>
     <div class="filters">
       <select id="f-sort" aria-label="Sort">
-        <option value="episodes">Most episodes</option><option value="shows">Most shows</option>
+        <option value="confidence">Highest ad score</option><option value="episodes">Most episodes</option><option value="shows">Most shows</option>
         <option value="newest">Newest</option><option value="duration">Longest</option>
       </select>
       <select id="f-show" aria-label="Show"><option value="">All shows</option>${shows.items.map((s) => `<option ${s.show === reviewState.show ? "selected" : ""}>${esc(s.show)}</option>`).join("")}</select>
@@ -347,8 +361,8 @@ function occurrenceTable(occ) {
       <td>${playButton(`/api/occurrences/${o.id}/audio?pad=3`, "Play with 3 seconds of context")}</td>
       <td class="ep-name"><a href="#/episodes/${o.episode_id}">${esc(o.name)}</a></td>
       <td>${esc(o.show)}</td>
-      <td class="num mono">${fmtTime(o.start)}–${fmtTime(o.end)}</td>
-      <td class="num">${fmtDuration(o.end - o.start)}</td></tr>`).join("")}</tbody></table></div>
+      <td class="num mono">${timeRange(o)}</td>
+      <td class="num">${fmtClipLen(o.end - o.start)}</td></tr>`).join("")}</tbody></table></div>
     <p class="muted" style="font-size:13px;margin:6px 0 0">Play buttons here include 3 s either side, so you can check the boundaries.</p>`;
 }
 
@@ -358,7 +372,7 @@ async function renderClip(id) {
   view.innerHTML = `
     <p><a href="#/review">← Review</a></p>
     <div class="row">${c.has_preview ? playButton(`/api/clips/${c.id}/preview`) : ""}
-      <h1 style="margin:0">${fmtDuration(c.duration)} clip #${c.id}</h1> ${statusTag(c)} ${suggestionTag(c.suggestion)}</div>
+      <h1 style="margin:0">${fmtClipLen(c.duration)} clip #${c.id}</h1> ${statusTag(c)} ${suggestionTag(c.suggestion)} ${confidenceTag(c)}</div>
     <p class="sub" style="margin-top:8px">First found in <strong>${esc(c.source_show)}</strong> · heard in ${c.episode_count} episode(s) across ${c.show_count} show(s)${d.cut_episodes ? ` · cut from ${d.cut_episodes} episode(s) so far` : ""}${c.suggestion ? ` · ${esc(c.suggestion.reason)}` : ""}</p>
     <div class="row">
       <button class="btn ad ${c.status === "ad" ? "on" : ""}" data-set="ad">Ad: cut it everywhere</button>
@@ -467,7 +481,7 @@ async function renderEpisode(id) {
       <tbody>${d.occurrences.map((o) => `<tr>
         <td>${playButton(`/api/occurrences/${o.id}/audio?pad=3`, "Play with context")}</td>
         <td><a href="#/clips/${o.clip_id}">#${o.clip_id}</a></td>
-        <td class="num mono">${fmtTime(o.start)}–${fmtTime(o.end)}</td><td class="num">${fmtDuration(o.end - o.start)}</td>
+        <td class="num mono">${timeRange(o)}</td><td class="num">${fmtClipLen(o.end - o.start)}</td>
         <td>${statusTag({ status: o.status })}</td><td class="num">${o.episode_count} ep · ${o.show_count} show</td></tr>`).join("")}</tbody></table></div>`
       : `<p class="muted">${e.status === "queued" ? "Not analysed yet." : "No repeated audio found in the current file."}</p>`}
     ${d.cuts.length ? `<h2>Cut so far</h2><p class="muted">${fmtDuration(removed)} removed in ${d.cuts.length} span(s): ${d.cuts.map((c) => `${fmtTime(c.start)}–${fmtTime(c.end)}`).join(", ")} (times as they were at each cut).</p>` : ""}

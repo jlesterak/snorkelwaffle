@@ -19,7 +19,8 @@ log = logging.getLogger(__name__)
 STATIC = os.path.join(os.path.dirname(__file__), "static")
 
 CLIP_COLS = ("id, duration, status, decided_by, source_episode_id, source_show, source_start, note,"
-             " episode_count, show_count, suggestion, created_at, decided_at, swept, preview IS NOT NULL AS has_preview")
+             " episode_count, show_count, suggestion, confidence, ref_path IS NOT NULL AS exact, created_at, decided_at,"
+             " swept, preview IS NOT NULL AS has_preview")
 EP_COLS = ("id, path, show, name, size, mtime, duration, status, error, excluded, cut_failed, removed_seconds,"
            " note, discovered_at, analyzed_at, cut_at")
 
@@ -93,9 +94,10 @@ class App:
     # ------------------------------------------------------------------- clips
     def list_clips(self, req):
         status = req.arg("status", "pending")
-        order = {"episodes": "episode_count DESC, id DESC", "newest": "id DESC", "duration": "duration DESC",
-                 "shows": "show_count DESC, episode_count DESC"}.get(req.arg("sort", "episodes"),
-                                                                     "episode_count DESC, id DESC")
+        order = {"confidence": "confidence DESC, episode_count DESC, id DESC",
+                 "episodes": "episode_count DESC, id DESC", "newest": "id DESC", "duration": "duration DESC",
+                 "shows": "show_count DESC, episode_count DESC"}.get(req.arg("sort", "confidence"),
+                                                                     "confidence DESC, id DESC")
         where, args = [], []
         if status != "all":
             where.append("status=?")
@@ -123,7 +125,8 @@ class App:
         clip = self.db.q1(f"SELECT {CLIP_COLS} FROM clips WHERE id=?", (cid,))
         if clip is None:
             raise HttpError(404, "no such clip")
-        occ = self.db.q("SELECT o.id, o.start, o.end, o.ber, e.id AS episode_id, e.name, e.show, e.duration"
+        occ = self.db.q("SELECT o.id, o.start, o.end, o.ber, o.refined, e.id AS episode_id, e.name, e.show,"
+                        " e.duration"
                         " FROM occurrences o JOIN episodes e ON e.id=o.episode_id WHERE o.clip_id=?"
                         " ORDER BY e.show, e.mtime DESC LIMIT 500", (cid,))
         cut = self.db.q1("SELECT count(DISTINCT episode_id) AS n FROM cuts WHERE clip_id=?", (cid,))["n"]
@@ -236,7 +239,8 @@ class App:
         ep = self.db.q1(f"SELECT {EP_COLS} FROM episodes WHERE id=?", (eid,))
         if ep is None:
             raise HttpError(404, "no such episode")
-        occ = self.db.q("SELECT o.id, o.clip_id, o.start, o.end, o.ber, c.status, c.duration AS clip_duration,"
+        occ = self.db.q("SELECT o.id, o.clip_id, o.start, o.end, o.ber, o.refined, c.status, c.confidence,"
+                        " c.duration AS clip_duration,"
                         " c.episode_count, c.show_count FROM occurrences o JOIN clips c ON c.id=o.clip_id"
                         " WHERE o.episode_id=? ORDER BY o.start", (eid,))
         cuts = self.db.q("SELECT clip_id, start, end, at FROM cuts WHERE episode_id=? ORDER BY at, start", (eid,))

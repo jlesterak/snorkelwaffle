@@ -12,6 +12,9 @@ repeated clip **once**, and it cuts the ads out of every episode in place.
 - **Works on the library you already have.** Point it at the folder
   Audiobookshelf downloads into. There are no feeds to swap and no apps to
   change.
+- **Exact cuts.** Fingerprints find a clip to about ±1 s. The edges are then
+  pinned to about ±50 ms by lining up the actual audio, so no clipped words
+  and no ad tails.
 - **Lossless and reversible.** Cuts use stream copy with no re-encode. Tags,
   cover art and (remapped) chapters are kept. The file is overwritten in
   place, keeping its inode, so Audiobookshelf sees the same file. Originals are
@@ -29,18 +32,23 @@ out. See [CREDITS.md](CREDITS.md) for tools that do it.
 
 1. **Fingerprint.** Each episode gets a Chromaprint fingerprint (~8 values per
    second).
-2. **Discover.** The episode is compared with its nearest few episodes from the
-   same show. Any stretch of audio shared between them (8 s to 5 min by
-   default) becomes a **clip**.
-3. **Sweep.** New clips are looked for across the whole library, including
+2. **Discover.** The episode is compared with its nearest 8 episodes from the
+   same show, and with 4 episodes of other shows downloaded around the same
+   time. Any stretch of audio shared between them (8 s to 5 min by default)
+   becomes a **clip**. Two occurrences are enough.
+3. **Pin the edges.** The clip's two copies are lined up sample by sample to
+   find exactly where the shared audio starts and ends. A few seconds around
+   each edge are kept so every later occurrence can be placed just as exactly.
+4. **Sweep.** New clips are looked for across the whole library, including
    other shows. Network ads often turn up on several shows.
-4. **Review.** Each clip gets a hint:
+5. **Review.** Each clip gets a hint:
    - *Likely ad*: heard on 2 or more shows, or typical ad length and moves around.
    - *Likely intro/outro*: sits at the same spot in most episodes.
 
-   You mark it **Ad** (cut everywhere) or **Keep**. Auto-approve can handle
-   the obvious cases.
-5. **Cut.** Every episode containing an approved ad is cut losslessly. It is
+   It also gets an **ad score** from 0 to 100. You mark it **Ad** (cut
+   everywhere) or **Keep**. With auto-approve set to `confident`, clips
+   scoring 85 or more are cut without asking and the rest wait for you.
+6. **Cut.** Every episode containing an approved ad is cut losslessly. It is
    then re-fingerprinted to confirm the ad is gone, and Audiobookshelf is asked
    to rescan.
 
@@ -71,8 +79,10 @@ progress), then open **Review**:
   `U` undoes the decision.
 - **Where?** lists every episode containing the clip. Its play buttons add 3 s
   either side so you can check the boundaries.
-- Once you trust it, set **Auto-approve** to `multi_show` so network ads found
-  on 2 or more shows are cut without asking.
+- Once you trust it, set **Auto-approve** to `confident`. Clips with an ad
+  score of 85 or more are then cut without asking, and lower scores wait for
+  review. `multi_show` is a stricter option: it only auto-cuts clips heard on
+  2 or more shows.
 
 To see what it would do before any file changes, turn **Cutting enabled** off
 in Settings. Everything else (analysis, discovery, review) keeps working.
@@ -98,8 +108,8 @@ in Settings. Everything else (analysis, discovery, review) keeps working.
 
 | Group | Settings |
 |---|---|
-| Cutting | Cutting enabled, auto-approve (`off` / `multi_show` / `likely`), start/end padding, Audiobookshelf rescan |
-| Detection | Shortest and longest clip, how many episodes to compare, minimum repeats, match across shows, match tolerance |
+| Cutting | Cutting enabled, auto-approve (`off` / `multi_show` / `confident`) and its threshold, start/end padding, Audiobookshelf rescan |
+| Detection | Shortest and longest clip, same-show and other-show episodes to compare, minimum repeats, exact boundaries, match across shows, match tolerance |
 | Library | Scan interval, settle time (skip files still downloading), backlog window |
 | Originals | Size cap (GB) and maximum age (days). A cap of 0 keeps nothing, which means cuts can't be undone. |
 

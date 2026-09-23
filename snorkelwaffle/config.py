@@ -73,11 +73,16 @@ SETTINGS = [
          help="Master switch. When off, episodes are still analysed and clips still found, "
               "but no audio file is modified."),
     dict(key="auto_approve", type="choice", default="off", group="Cutting",
-         choices=["off", "multi_show", "likely"],
+         choices=["off", "multi_show", "confident"], aliases={"likely": "confident"},
          label="Auto-approve clips",
          help="off: every clip waits for your review. multi_show: clips heard on 2+ different "
-              "shows are treated as ads automatically (network-inserted ads). likely: also "
-              "auto-approve typical-length clips that move around mid-episode."),
+              "shows are cut automatically (network-inserted ads). confident: clips whose ad "
+              "confidence reaches the threshold below are cut automatically; the rest wait for review. "
+              "Clips that look like intros/outros are never auto-approved."),
+    dict(key="auto_approve_min_confidence", type="int", default=85, min=50, max=100, group="Cutting",
+         label="Auto-approve threshold",
+         help="Ad confidence (0-100) needed for 'confident' auto-approve. Heard on 2+ shows scores ~70-85; "
+              "adding a standard ad length (15/30/60 s) or moving around pushes it past 85."),
     dict(key="pad_start", type="float", default=0.0, min=-5, max=5, group="Cutting",
          label="Start padding (s)",
          help="Extra seconds to cut before each ad. Negative values cut less."),
@@ -95,13 +100,21 @@ SETTINGS = [
     dict(key="max_clip_seconds", type="float", default=300, min=30, max=1800, group="Detection",
          label="Longest clip (s)",
          help="Repeated audio longer than this is ignored (re-runs, duplicate downloads)."),
-    dict(key="sibling_count", type="int", default=6, min=1, max=50, group="Detection",
+    dict(key="sibling_count", type="int", default=8, min=1, max=50, group="Detection",
          label="Episodes to compare against",
          help="Each new episode is compared with this many nearby episodes of the same show "
               "to discover new repeated clips."),
     dict(key="min_repeats", type="int", default=1, min=1, max=10, group="Detection",
          label="Minimum repeats",
          help="A new clip must be found in at least this many other episodes."),
+    dict(key="cross_show_discovery", type="int", default=4, min=0, max=20, group="Detection",
+         label="Other-show episodes to compare",
+         help="Also compare each new episode with this many episodes of other shows downloaded around "
+              "the same time, to discover ads a network runs across several shows. 0 = off."),
+    dict(key="refine_boundaries", type="bool", default=True, group="Detection",
+         label="Exact boundaries",
+         help="Align the actual audio around each clip edge (about ±50 ms instead of about ±1 s). "
+              "Costs a fraction of a second per occurrence."),
     dict(key="cross_show", type="bool", default=True, group="Detection",
          label="Match clips across shows",
          help="Look for known clips in every show, not only the one they were found in."),
@@ -143,6 +156,7 @@ def coerce(spec, value):
             raise ValueError(f"{spec['key']}: not a boolean: {value!r}")
         return bool(value)
     if t == "choice":
+        value = spec.get("aliases", {}).get(value, value)
         if value not in spec["choices"]:
             raise ValueError(f"{spec['key']}: must be one of {spec['choices']}")
         return value

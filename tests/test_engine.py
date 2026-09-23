@@ -51,7 +51,8 @@ class EngineTest(unittest.TestCase):
         shutil.rmtree(cls.tmp, ignore_errors=True)
 
     def make_engine(self):
-        env = config.Env(library_dirs=[self.lib], data_dir=os.path.join(self.tmp, "data"), nice=0)
+        data = tempfile.mkdtemp(dir=self.tmp, prefix="data-")
+        env = config.Env(library_dirs=[self.lib], data_dir=data, nice=0)
         db = Database(os.path.join(env.data_dir, "sw.db"))
         db.put_settings({"settle_minutes": 0})
         return db, Engine(db, env)
@@ -79,11 +80,15 @@ class EngineTest(unittest.TestCase):
         self.assertEqual(ad1["show_count"], 2)      # heard on Show A and Show B
         self.assertEqual(ad1["episode_count"], 4)
         self.assertIn("different shows", ad1["suggestion"])
+        self.assertGreaterEqual(ad1["confidence"], 85)   # 2 shows + standard 30 s length
+        self.assertTrue(ad1["ref_path"])
 
         theme = min(clips, key=lambda c: abs(c["duration"] - 12))
         self.assertIn("intro", theme["suggestion"])
+        self.assertLess(theme["confidence"], 20)
+        self.assertEqual(db.q1("SELECT count(*) n FROM occurrences WHERE refined=0")["n"], 0)
 
-        # Boundaries: every occurrence of every clip within 0.6 s of the truth,
+        # Boundaries: every occurrence of every clip matches the truth,
         # including the intro that follows a pre-roll ad in ep3.
         ad2 = min(clips, key=lambda c: abs(c["duration"] - 20))
         seeds = {ad1["id"]: AD1, ad2["id"]: AD2, theme["id"]: THEME}
@@ -95,8 +100,9 @@ class EngineTest(unittest.TestCase):
                 occ = db.q1("SELECT start, end FROM occurrences WHERE clip_id=? AND episode_id=?", (cid, ep["id"]))
                 self.assertEqual(truth is None, occ is None, (rel, seed))
                 if truth:
-                    self.assertAlmostEqual(occ["start"], truth[0], delta=0.6, msg=(rel, seed))
-                    self.assertAlmostEqual(occ["end"], truth[1], delta=0.6, msg=(rel, seed))
+                    # Refined boundaries: well under a tenth of a second.
+                    self.assertAlmostEqual(occ["start"], truth[0], delta=0.08, msg=(rel, seed))
+                    self.assertAlmostEqual(occ["end"], truth[1], delta=0.08, msg=(rel, seed))
                     checked += 1
         self.assertEqual(checked, 9)
 
@@ -114,14 +120,14 @@ class EngineTest(unittest.TestCase):
         self.assertEqual(n, 4)
         self.assertEqual(db.q1("SELECT count(*) n FROM episodes WHERE cut_failed=1")["n"], 0)
         self.assertEqual(os.stat(ep1).st_ino, ino_before)
-        self.assertAlmostEqual(fingerprint.duration_of(ep1), dur_before - 50, delta=1.5)
+        self.assertAlmostEqual(fingerprint.duration_of(ep1), dur_before - 50, delta=0.3)
 
         info = fingerprint.probe(ep1)
         self.assertEqual(info["format"]["tags"].get("title"), "Episode One")
         ch = info["chapters"]
         self.assertEqual(len(ch), 2)
         # Part 1 contained AD1 (30 s) so it shrinks; Part 2 contained AD2 (20 s).
-        self.assertAlmostEqual(float(ch[0]["end_time"]), 162, delta=1.5)
+        self.assertAlmostEqual(float(ch[0]["end_time"]), 162, delta=0.3)
         self.assertAlmostEqual(float(ch[1]["end_time"]), dur_before - 50, delta=2)
 
         # Nothing further to cut; theme/outro survived.
@@ -140,6 +146,28 @@ class EngineTest(unittest.TestCase):
         self.assertAlmostEqual(fingerprint.duration_of(ep1), dur_before, delta=0.2)
         self.run_queue(db, eng)
         self.assertIsNone(eng.next_to_cut())
+
+    def test_auto_approve_confident_and_backfill(self):
+        db, eng = self.make_engine()
+        s = db.put_settings({"auto_approve": "confident", "refine_boundaries": False})
+        eng.scan(s)
+        self.run_queue(db, eng)
+        rows = {round(r["duration"]): r for r in db.q("SELECT * FROM clips")}
+        ad1 = min(rows.values(), key=lambda c: abs(c["duration"] - 30))
+        theme = min(rows.values(), key=lambda c: abs(c["duration"] - 12))
+        self.assertEqual((ad1["status"], ad1["decided_by"]), ("ad", "auto"))
+        self.assertEqual(theme["status"], "pending")
+        self.assertIsNone(ad1["ref_path"])           # refinement was off
+        # Turning refinement on backfills exact edges for existing clips.
+        s = db.put_settings({"refine_boundaries": True, "auto_approve": "off"})
+        db.x("UPDATE clips SET refine_tried=0")
+        while (row := eng.next_unrefined_clip()):
+            eng.refine_clip(row["id"], s)
+        self.assertTrue(db.q1("SELECT ref_path FROM clips WHERE id=?", (ad1["id"],))["ref_path"])
+        exact = db.q("SELECT start, end FROM occurrences WHERE clip_id=? AND refined=1", (ad1["id"],))
+        self.assertEqual(len(exact), 4)
+        for o in exact:
+            self.assertAlmostEqual(o["end"] - o["start"], 30.0, delta=0.08)
 
     def test_originals_cap(self):
         db, eng = self.make_engine()

@@ -7,6 +7,9 @@ Vocabulary:
   a jingle). Found by comparing an episode with nearby episodes of its show.
   Each clip is reviewed once: ``ad`` (cut it everywhere) or ``keep``.
 * occurrence: where a clip was heard in a particular episode.
+
+Boundaries come from fingerprints first (about ±1 s), then, where the audio
+allows, from waveform alignment (about ±50 ms); see refine.py.
 """
 
 import json
@@ -17,7 +20,9 @@ import statistics
 import subprocess
 from collections import namedtuple
 
-from . import cutter, fingerprint
+import numpy as np
+
+from . import cutter, fingerprint, refine
 from .db import now
 from .matcher import MatchParams, Prepared, find_matches, subtract_ranges
 
@@ -32,8 +37,8 @@ EDGE_ITEMS = 16
 # the usual ~1 s calibration lead.
 START_EDGE_ITEMS = 8
 
-ClipRef = namedtuple("ClipRef", "id fp show fp_offset start duration")
-Occ = namedtuple("Occ", "clip_id s_item e_item start end ber")
+ClipRef = namedtuple("ClipRef", "id fp show fp_offset start duration ref_path")
+Occ = namedtuple("Occ", "clip_id s_item e_item start end ber refined")
 Piece = namedtuple("Piece", "s_item e_item start end siblings")  # siblings: set of episode ids
 
 
@@ -44,9 +49,11 @@ class Engine:
         self.originals_dir = os.path.join(env.data_dir, "originals")
         self.previews_dir = os.path.join(env.data_dir, "previews")
         self.tmp_dir = os.path.join(env.data_dir, "tmp")
-        for d in (self.originals_dir, self.previews_dir, self.tmp_dir):
+        self.refs_dir = os.path.join(env.data_dir, "refs")
+        for d in (self.originals_dir, self.previews_dir, self.tmp_dir, self.refs_dir):
             os.makedirs(d, exist_ok=True)
-        self._clips = {}  # id -> (fp array, source_show)
+        self._clips = {}  # id -> ClipRef
+        self._refs = {}   # ref_path -> loaded edge audio
         self.changed_paths = set()
 
     # ------------------------------------------------------------------ helpers
@@ -72,7 +79,7 @@ class Engine:
             end = duration if e_item >= fp_len - 2 else min(end, duration)
         return round(start, 3), round(end, 3)
 
-    def _occurrence_span(self, clip, m, fp_len, duration):
+    def _occurrence_span(self, clip, m, fp_len, duration, path=None, settings=None):
         """Where clip ``clip`` sits in an episode, given match ``m`` (a = clip, b = episode).
 
         When the match reaches the clip's edges the clip's own span is placed
@@ -86,19 +93,49 @@ class Engine:
         end = clip.start + clip.duration + shift if m.a_end >= len(clip.fp) - EDGE_ITEMS else run_end
         start = max(0.0, start)
         end = min(duration, end) if duration else end
-        return round(start, 3), round(end, 3)
+        refined = False
+        full_start = m.a_start <= EDGE_ITEMS
+        full_end = m.a_end >= len(clip.fp) - EDGE_ITEMS
+        refs = self._load_refs(clip.ref_path)
+        if refs is not None and path and settings and settings["refine_boundaries"] and (full_start or full_end):
+            ok = True
+            if full_start:
+                s = refine.locate_edge(path, start, refs, "start", self.env.nice)
+                ok = ok and s is not None
+                start = s if s is not None else start
+            if full_end:
+                e = refine.locate_edge(path, end, refs, "end", self.env.nice)
+                ok = ok and e is not None
+                end = e if e is not None else end
+            refined = ok and end > start
+        return round(start, 3), round(end, 3), refined
+
+    def _load_refs(self, ref_path):
+        if not ref_path:
+            return None
+        if ref_path not in self._refs:
+            try:
+                with np.load(ref_path) as z:
+                    self._refs[ref_path] = {k: z[k] for k in z.files}
+            except (OSError, ValueError):
+                self._refs[ref_path] = None
+        return self._refs[ref_path]
 
     def refresh_clip_cache(self):
-        rows = self.db.q("SELECT id, source_show, fp_offset, source_start, duration FROM clips")
+        rows = self.db.q("SELECT id, source_show, fp_offset, source_start, duration, ref_path FROM clips")
         ids = {r["id"] for r in rows}
         for cid in list(self._clips):
             if cid not in ids:
                 del self._clips[cid]
         for r in rows:
-            if r["id"] not in self._clips:
+            old = self._clips.get(r["id"])
+            if old is None:
                 blob = self.db.q1("SELECT fp FROM clips WHERE id=?", (r["id"],))["fp"]
-                self._clips[r["id"]] = ClipRef(r["id"], fingerprint.from_bytes(blob), r["source_show"],
-                                               r["fp_offset"], r["source_start"], r["duration"])
+                cfp = fingerprint.from_bytes(blob)
+            else:
+                cfp = old.fp
+            self._clips[r["id"]] = ClipRef(r["id"], cfp, r["source_show"], r["fp_offset"], r["source_start"],
+                                           r["duration"], r["ref_path"])
         return self._clips
 
     # --------------------------------------------------------------------- scan
@@ -179,7 +216,7 @@ class Engine:
             return
         params = self.params(settings)
         prep = Prepared(fp)
-        occs = self._match_library(prep, len(fp), duration, ep["show"], settings, params)
+        occs = self._match_library(prep, len(fp), duration, ep["show"], settings, params, path)
 
         new_clips, note = [], None
         if discover and len(fp) >= params.min_items:
@@ -188,8 +225,8 @@ class Engine:
         with self.db.tx() as c:
             c.execute("DELETE FROM occurrences WHERE episode_id=?", (ep_id,))
             for o in occs:
-                c.execute("INSERT INTO occurrences (clip_id, episode_id, start, end, ber) VALUES (?, ?, ?, ?, ?)",
-                          (o.clip_id, ep_id, o.start, o.end, o.ber))
+                c.execute("INSERT INTO occurrences (clip_id, episode_id, start, end, ber, refined)"
+                          " VALUES (?, ?, ?, ?, ?, ?)", (o.clip_id, ep_id, o.start, o.end, o.ber, int(o.refined)))
             c.execute("UPDATE episodes SET fp=?, duration=?, size=?, mtime=?, status='analyzed', error=NULL,"
                       " analyzed_at=?, note=? WHERE id=?",
                       (fingerprint.to_bytes(fp), duration, st.st_size, st.st_mtime, now(), note, ep_id))
@@ -200,18 +237,22 @@ class Engine:
         if occs or new_clips:
             log.info("%s: %d known clip(s), %d new clip(s)", ep["name"], len(occs), len(new_clips))
 
-    def _match_library(self, prep, fp_len, duration, show, settings, params):
+    def _match_library(self, prep, fp_len, duration, show, settings, params, path):
         out = []
         for clip in self.refresh_clip_cache().values():
             if not settings["cross_show"] and clip.show != show:
                 continue
             for m in find_matches(clip.fp, prep, params):
-                start, end = self._occurrence_span(clip, m, fp_len, duration)
-                out.append(Occ(clip.id, m.b_start, m.b_end, start, end, m.ber))
+                start, end, refined = self._occurrence_span(clip, m, fp_len, duration, path, settings)
+                out.append(Occ(clip.id, m.b_start, m.b_end, start, end, m.ber, refined))
         return out
 
     def _discover(self, ep, fp, duration, occs, settings, params):
-        """Compare with nearby episodes of the same show; return candidate new clips.
+        """Compare with nearby episodes; return candidate new clips.
+
+        "Nearby" means the same show's episodes closest in time, plus (with
+        cross-show discovery) a few episodes of other shows downloaded around the
+        same time. Networks run the same ad campaign across shows at once.
 
         Audio already explained by a known clip is subtracted first. Where a new
         piece butts up against a known clip, it starts/ends exactly where that
@@ -222,6 +263,10 @@ class Engine:
             "SELECT id, fp, duration FROM episodes WHERE show=? AND id!=? AND status='analyzed' AND fp IS NOT NULL"
             " ORDER BY abs(mtime - ?) LIMIT ?",
             (ep["show"], ep["id"], ep["mtime"], settings["sibling_count"]))
+        if settings["cross_show"] and settings["cross_show_discovery"]:
+            sibs = list(sibs) + list(self.db.q(
+                "SELECT id, fp, duration FROM episodes WHERE show!=? AND status='analyzed' AND fp IS NOT NULL"
+                " ORDER BY abs(mtime - ?) LIMIT ?", (ep["show"], ep["mtime"], settings["cross_show_discovery"])))
         claimed = [(o.s_item, o.e_item) for o in occs]
         occ_end = {o.e_item: o.end for o in occs}
         occ_start = {o.s_item: o.start for o in occs}
@@ -286,22 +331,31 @@ class Engine:
         cfp = fp[piece.s_item:piece.e_item].copy()
         start, end = piece.start, piece.end
         fp_offset = piece.s_item * fingerprint.ITEM_SECONDS
+        refs = None
+        if settings["refine_boundaries"]:
+            exact = self._measure_with_siblings(ep["path"], start, end, cfp, piece.siblings, params)
+            if exact:
+                start, end = exact
+                refs = refine.make_refs(ep["path"], start, end, self.env.nice)
         with self.db.tx() as c:
             cur = c.execute(
                 "INSERT INTO clips (fp, fp_offset, duration, source_episode_id, source_show, source_start,"
                 " created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (fingerprint.to_bytes(cfp), fp_offset, round(end - start, 3), ep["id"], ep["show"], start, now()))
             cid = cur.lastrowid
-            c.execute("INSERT INTO occurrences (clip_id, episode_id, start, end, ber) VALUES (?, ?, ?, ?, 0)",
-                      (cid, ep["id"], start, end))
-        clip = ClipRef(cid, cfp, ep["show"], fp_offset, start, round(end - start, 3))
+            c.execute("INSERT INTO occurrences (clip_id, episode_id, start, end, ber, refined)"
+                      " VALUES (?, ?, ?, ?, 0, ?)", (cid, ep["id"], start, end, int(refs is not None)))
+        ref_path = self._save_refs(cid, refs) if refs else None
+        self.db.x("UPDATE clips SET ref_path=?, refine_tried=1 WHERE id=?", (ref_path, cid))
+        clip = ClipRef(cid, cfp, ep["show"], fp_offset, start, round(end - start, 3), ref_path)
         self._clips[cid] = clip
         # Record where the supporting siblings have it too, so the review page is
         # useful before the next full sweep.
         for sid in piece.siblings:
             row = self.db.q1("SELECT fp, duration FROM episodes WHERE id=?", (sid,))
             if row and row["fp"]:
-                self._record_matches(clip, sid, fingerprint.from_bytes(row["fp"]), row["duration"], params)
+                self._record_matches(clip, sid, fingerprint.from_bytes(row["fp"]), row["duration"], params,
+                                     settings=settings)
         preview = os.path.join(self.previews_dir, f"clip_{cid}.mp3")
         try:
             subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-ss", f"{start:.3f}", "-t",
@@ -313,21 +367,89 @@ class Engine:
         self.update_clip_stats([cid], settings)
         return cid
 
-    def _record_matches(self, clip, ep_id, efp, duration, params, prep=None):
+    def _measure_with_siblings(self, path, start, end, cfp, sibling_ids, params):
+        """Exact (start, end) of a new clip in ``path``, measured against a sibling that has it."""
+        for sid in list(sibling_ids)[:3]:
+            row = self.db.q1("SELECT path, fp, duration FROM episodes WHERE id=?", (sid,))
+            if not row or not row["fp"] or not os.path.exists(row["path"]):
+                continue
+            sfp = fingerprint.from_bytes(row["fp"])
+            for m in find_matches(cfp, sfp, params):
+                if m.a_start > EDGE_ITEMS or m.a_end < len(cfp) - EDGE_ITEMS:
+                    continue  # the sibling only has part of it
+                s2, e2 = self._span_seconds(m.b_start, m.b_end, len(sfp), row["duration"])
+                exact = refine.measure_pair(path, start, end, row["path"], s2, e2, self.env.nice)
+                if exact:
+                    return float(exact[0]), float(exact[1])
+        return None
+
+    def _save_refs(self, cid, refs):
+        path = os.path.join(self.refs_dir, f"clip_{cid}.npz")
+        np.savez(path, **refs)
+        self._refs[path] = refs
+        return path
+
+    def _record_matches(self, clip, ep_id, efp, duration, params, prep=None, settings=None):
         """Insert occurrences of ``clip`` in episode ``ep_id`` that aren't recorded yet."""
         ms = find_matches(clip.fp, prep if prep is not None else efp, params)
         if not ms:
             return 0
+        ep = self.db.q1("SELECT path FROM episodes WHERE id=?", (ep_id,))
         existing = self.db.q("SELECT start, end FROM occurrences WHERE clip_id=? AND episode_id=?", (clip.id, ep_id))
         added = 0
         for m in ms:
-            start, end = self._occurrence_span(clip, m, len(efp), duration)
+            start, end, refined = self._occurrence_span(clip, m, len(efp), duration, ep["path"], settings)
             if any(min(end, r["end"]) - max(start, r["start"]) > 0.5 * (end - start) for r in existing):
                 continue
-            self.db.x("INSERT INTO occurrences (clip_id, episode_id, start, end, ber) VALUES (?, ?, ?, ?, ?)",
-                      (clip.id, ep_id, start, end, m.ber))
+            self.db.x("INSERT INTO occurrences (clip_id, episode_id, start, end, ber, refined)"
+                      " VALUES (?, ?, ?, ?, ?, ?)", (clip.id, ep_id, start, end, m.ber, int(refined)))
             added += 1
         return added
+
+    # --------------------------------------------------- refinement backfill
+    def next_unrefined_clip(self):
+        return self.db.q1("SELECT id FROM clips WHERE refine_tried=0 LIMIT 1")
+
+    def refine_clip(self, cid, settings):
+        """Give an older clip (made before refinement existed) exact edges.
+
+        Measures two of its occurrences against each other, stores edge audio,
+        then re-places every occurrence of the clip.
+        """
+        self.db.x("UPDATE clips SET refine_tried=1 WHERE id=?", (cid,))
+        if not settings["refine_boundaries"]:
+            return
+        occ = self.db.q("SELECT o.id, o.start, o.end, e.path FROM occurrences o JOIN episodes e ON e.id=o.episode_id"
+                        " WHERE o.clip_id=? AND e.status='analyzed' ORDER BY o.id", (cid,))
+        occ = [o for o in occ if os.path.exists(o["path"])]
+        exact = None
+        for a in occ[:4]:
+            for b in occ[:4]:
+                if a["path"] == b["path"]:
+                    continue
+                exact = refine.measure_pair(a["path"], a["start"], a["end"], b["path"], b["start"], b["end"],
+                                            self.env.nice)
+                if exact:
+                    break
+            if exact:
+                break
+        if not exact:
+            log.info("Clip %d: waveforms don't align cleanly; keeping fingerprint boundaries", cid)
+            return
+        start, end = float(exact[0]), float(exact[1])
+        ref_path = self._save_refs(cid, refine.make_refs(a["path"], start, end, self.env.nice))
+        self.db.x("UPDATE clips SET ref_path=?, duration=? WHERE id=?", (ref_path, round(end - start, 3), cid))
+        refs = self._refs[ref_path]
+        fixed = 0
+        for o in occ:
+            s = refine.locate_edge(o["path"], o["start"], refs, "start", self.env.nice)
+            e = refine.locate_edge(o["path"], o["end"], refs, "end", self.env.nice)
+            if s is not None and e is not None and e > s:
+                self.db.x("UPDATE occurrences SET start=?, end=?, refined=1 WHERE id=?", (s, e, o["id"]))
+                fixed += 1
+        self.refresh_clip_cache()
+        self.update_clip_stats([cid], settings)
+        log.info("Clip %d: refined to %.2fs; %d of %d occurrence(s) placed exactly", cid, end - start, fixed, len(occ))
 
     # -------------------------------------------------------------------- sweep
     def has_unswept(self):
@@ -355,7 +477,7 @@ class Engine:
             for clip in todo:
                 if not settings["cross_show"] and row["show"] != clip.show:
                     continue
-                added += self._record_matches(clip, ep_id, efp, row["duration"], params, prep)
+                added += self._record_matches(clip, ep_id, efp, row["duration"], params, prep, settings)
         self.db.x(f"UPDATE clips SET swept=1 WHERE id IN ({','.join('?' * len(todo))})", [c.id for c in todo])
         self.update_clip_stats([c.id for c in todo], settings)
         log.info("Sweep done: %d additional occurrence(s)", added)
@@ -366,21 +488,27 @@ class Engine:
             clip = self.db.q1("SELECT * FROM clips WHERE id=?", (cid,))
             if clip is None:
                 continue
-            rows = self.db.q("SELECT o.start, o.end, e.show, e.duration, e.id FROM occurrences o"
+            rows = self.db.q("SELECT o.start, o.end, o.ber, e.show, e.duration, e.id FROM occurrences o"
                              " JOIN episodes e ON e.id=o.episode_id WHERE o.clip_id=?", (cid,))
             ep_count = len({r["id"] for r in rows})
             show_count = len({r["show"] for r in rows})
             sugg = suggest(clip["duration"], rows, show_count, ep_count)
+            score = ad_confidence(clip["duration"], rows, show_count, ep_count, sugg)
             status, decided_by, decided_at = clip["status"], clip["decided_by"], clip["decided_at"]
-            if status == "pending" and sugg and sugg["kind"] == "ad":
+            if status == "pending" and (sugg is None or sugg["kind"] != "theme"):
                 mode = settings["auto_approve"]
-                if (mode == "multi_show" and show_count >= 2) or mode == "likely":
+                if (mode == "multi_show" and show_count >= 2) or (
+                        mode == "confident" and score >= settings["auto_approve_min_confidence"]):
                     status, decided_by, decided_at = "ad", "auto", now()
-                    log.info("Auto-approved clip %d as ad (%s)", cid, sugg["reason"])
-            self.db.x("UPDATE clips SET episode_count=?, show_count=?, suggestion=?, status=?, decided_by=?,"
-                      " decided_at=? WHERE id=?",
-                      (ep_count, show_count, json.dumps(sugg) if sugg else None, status, decided_by,
+                    log.info("Auto-approved clip %d as ad (confidence %d)", cid, score)
+            self.db.x("UPDATE clips SET episode_count=?, show_count=?, suggestion=?, confidence=?, status=?,"
+                      " decided_by=?, decided_at=? WHERE id=?",
+                      (ep_count, show_count, json.dumps(sugg) if sugg else None, score, status, decided_by,
                        decided_at, cid))
+
+    def refresh_all_stats(self, settings):
+        """Recompute counts, hints and confidence for every clip (startup, upgrades)."""
+        self.update_clip_stats([r["id"] for r in self.db.q("SELECT id FROM clips")], settings)
 
     def reapply_auto_rules(self, settings):
         ids = [r["id"] for r in self.db.q("SELECT id FROM clips WHERE status='pending'")]
@@ -520,6 +648,43 @@ def suggest(duration, occ_rows, show_count, ep_count):
     if 12 <= duration <= 130 and spread > 30:
         return {"kind": "ad", "reason": "typical ad length and moves around between episodes"}
     return None
+
+
+STANDARD_AD_LENGTHS = (15, 30, 45, 60, 90, 120)
+
+
+def ad_confidence(duration, occ_rows, show_count, ep_count, sugg):
+    """0-100: how sure we are a clip is an ad. Drives "confident" auto-approve.
+
+    Signals, strongest first: heard on several shows (network-inserted); a
+    standard ad length (exact once boundaries are refined); moving around
+    between or within episodes; clean matches; lots of repeats. Intros and
+    outros score low because they sit at the same spot every time.
+    """
+    if sugg and sugg["kind"] == "theme":
+        return 5
+    score = 35
+    if show_count >= 2:
+        score += 35 + 5 * min(3, show_count - 2)
+    if any(abs(duration - n) <= 1.0 for n in STANDARD_AD_LENGTHS):
+        score += 15
+    elif 10 <= duration <= 130:
+        score += 5
+    elif duration > 180:
+        score -= 15
+    starts = [r["start"] for r in occ_rows]
+    per_episode = {}
+    for r in occ_rows:
+        per_episode[r["id"]] = per_episode.get(r["id"], 0) + 1
+    if (len(starts) > 1 and statistics.pstdev(starts) > 30) or any(n > 1 for n in per_episode.values()):
+        score += 10
+    if ep_count >= 4:
+        score += 5
+    bers = [r["ber"] for r in occ_rows if r["ber"]]
+    if bers:
+        mean_ber = sum(bers) / len(bers)
+        score += 5 if mean_ber < 0.08 else -10 if mean_ber > 0.18 else 0
+    return max(0, min(100, int(score)))
 
 
 def _mostly_fixed(values, tolerance=5.0, share=0.6):
