@@ -5,8 +5,7 @@
 - Real-episode validation, local copies in `testdata/` of 5 shows × 5
   episodes.
   - Detection, cutting, intro/outro hints and exact boundaries are confirmed.
-  - Still to do: tune confidence weights against more reviewed clips, then
-    release v0.2.0.
+  - Still to do: tune confidence weights against more reviewed clips.
 
 ## [PENDING]
 
@@ -22,6 +21,8 @@
   use.
 
 ## [COMPLETED]
+
+- 2026-09-23: Released v0.2.0.
 
 - 2026-09-23: Per-show modes (normal / review only / skip) and a "maybe a
   preview" hint.
