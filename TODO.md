@@ -6,6 +6,9 @@
   episodes.
   - Detection, cutting, intro/outro hints and exact boundaries are confirmed.
   - Still to do: tune confidence weights against more reviewed clips.
+- Live trial on icebox (DockSTARTer, v0.2.0, port 8484), deployed 2026-09-24.
+  - Still to do: set `SNORKELWAFFLE_ABS_TOKEN` in icebox's `.env` so cuts
+    trigger Audiobookshelf rescans.
 
 ## [PENDING]
 
