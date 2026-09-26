@@ -6,6 +6,16 @@
   episodes.
   - Detection, cutting, intro/outro hints and exact boundaries are confirmed.
   - Still to do: tune confidence weights against more reviewed clips.
+- Data-driven auto-approve, blocked until icebox finishes scanning and every
+  clip has been reviewed by hand.
+  - Copy icebox's `/config/snorkelwaffle.db` into `testdata/` (gitignored).
+  - Analyse the user-decided clips (`ad` / `keep`) against confidence and
+    each feature: shows, episodes, position, duration, BER, hint.
+  - Refit the `ad_confidence` weights and pick a single default threshold
+    with a strict precision target, since cutting real content costs more
+    than a missed ad.
+  - Ship the new weights and default with a before/after table in the
+    changelog.
 - Live trial on icebox (DockSTARTer, v0.2.0, port 8484), deployed 2026-09-24.
   - Still to do: set `SNORKELWAFFLE_ABS_TOKEN` in icebox's `.env` so cuts
     trigger Audiobookshelf rescans.
