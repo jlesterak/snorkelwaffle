@@ -193,6 +193,34 @@ class EngineTest(unittest.TestCase):
         self.assertEqual(ad1["show_count"], 2)
         self.assertEqual(ad1["status"], "ad")  # now also heard in a normal show, with a high score
 
+    def test_incomplete_download(self):
+        db, eng = self.make_engine()
+        s = db.get_settings()
+        stub = os.path.join(self.lib, "Show A", "ep4 (0b87cb3e-1cdd-4a87-8cce-e391861a1770).mp3")
+        open(stub, "wb").close()
+        eng.scan(s)
+        self.run_queue(db, eng)
+        row = db.q1("SELECT status, error FROM episodes WHERE path=?", (stub,))
+        self.assertEqual((row["status"], row["error"]), ("incomplete", None))
+        # Show-mode changes and rescans leave it parked.
+        eng.apply_show_modes(s)
+        self.assertEqual(eng.scan(s), 0)
+        # A retried download that completes is analysed normally.
+        shutil.copy(os.path.join(self.lib, "Show A", "ep1.mp3"), stub)
+        os.utime(stub, (1, 1))
+        self.assertEqual(eng.scan(s), 1)
+        self.run_queue(db, eng)
+        self.assertEqual(db.q1("SELECT status FROM episodes WHERE path=?", (stub,))["status"], "analyzed")
+
+    def test_incomplete_migration(self):
+        db, _ = self.make_engine()
+        db.x("INSERT INTO episodes (path, library, show, name, size, status, error, discovered_at)"
+             " VALUES ('/x/a.mp3', '/x', 'S', 'a.mp3', 0, 'error', 'Invalid data', 0),"
+             " ('/x/b.mp3', '/x', 'S', 'b.mp3', 5000000, 'error', 'Empty fingerprint', 0)")
+        db._migrate()
+        got = {r["name"]: r["status"] for r in db.q("SELECT name, status FROM episodes WHERE library='/x'")}
+        self.assertEqual(got, {"a.mp3": "incomplete", "b.mp3": "error"})
+
     def test_originals_cap(self):
         db, eng = self.make_engine()
         src = os.path.join(self.tmp, "orig_src.bin")

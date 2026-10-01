@@ -7,6 +7,14 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## [Unreleased]
 
+### Changed
+- Audio files under 100 KB are now marked "incomplete" instead of "error",
+  so failed downloads stop filling the problems list. Audiobookshelf leaves
+  0-byte `name (uuid).mp3` retries behind; on icebox, 42 of the 44 errors
+  were small files like this. Such a file is analysed normally once it
+  grows, and existing error rows for small files are reclassified on
+  startup.
+
 ## [0.2.0] - 2026-09-23
 
 ### Added

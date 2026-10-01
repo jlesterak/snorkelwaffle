@@ -22,7 +22,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from . import cutter, fingerprint, refine
+from . import config, cutter, fingerprint, refine
 from .db import now
 from .matcher import MatchParams, Prepared, find_matches, subtract_ranges
 
@@ -235,6 +235,21 @@ class Engine:
     def next_queued(self):
         return self.db.q1("SELECT id FROM episodes WHERE status='queued' ORDER BY show, mtime DESC LIMIT 1")
 
+    def _mark_incomplete(self, ep, st, settings):
+        """Park a failed or partial download without reporting it as an error.
+
+        Rescans requeue it if the file grows, e.g. when the download is retried.
+        """
+        with self.db.tx() as c:
+            touched = {r["clip_id"] for r in c.execute("SELECT clip_id FROM occurrences WHERE episode_id=?",
+                                                       (ep["id"],)).fetchall()}
+            c.execute("DELETE FROM occurrences WHERE episode_id=?", (ep["id"],))
+            c.execute("UPDATE episodes SET status='incomplete', fp=NULL, duration=0, error=NULL, size=?, mtime=?,"
+                      " analyzed_at=? WHERE id=?", (st.st_size, st.st_mtime, now(), ep["id"]))
+        if touched:
+            self.update_clip_stats(touched, settings)
+        log.info("%s is only %d bytes; treating it as an incomplete download", ep["path"], st.st_size)
+
     def analyze(self, ep_id, settings, discover=True):
         ep = self.db.q1("SELECT * FROM episodes WHERE id=?", (ep_id,))
         path = ep["path"]
@@ -243,6 +258,9 @@ class Engine:
             return
         try:
             st = os.stat(path)
+            if st.st_size < config.MIN_EPISODE_BYTES:
+                self._mark_incomplete(ep, st, settings)
+                return
             fp = fingerprint.fingerprint_file(path, nice=self.env.nice)
             duration = fingerprint.duration_of(path)
         except (fingerprint.FingerprintError, OSError, subprocess.SubprocessError) as exc:

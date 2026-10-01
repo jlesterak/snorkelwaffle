@@ -65,6 +65,11 @@ class Env:
         }
 
 
+# Audio files smaller than this are failed or partial downloads (Audiobookshelf
+# leaves 0-byte "name (uuid).mp3" retries behind). 100 KB is ~12 s at 64 kbps.
+MIN_EPISODE_BYTES = 100_000
+
+
 # UI-editable settings. The web page renders its form from this list.
 SETTINGS = [
     # --- Cutting ---

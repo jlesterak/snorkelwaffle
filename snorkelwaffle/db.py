@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS episodes (
     mtime REAL NOT NULL DEFAULT 0,
     duration REAL NOT NULL DEFAULT 0,
     fp BLOB,
-    status TEXT NOT NULL DEFAULT 'queued',   -- queued | analyzed | error | missing | skipped
+    status TEXT NOT NULL DEFAULT 'queued',   -- queued | analyzed | error | missing | skipped | incomplete
     error TEXT,
     excluded INTEGER NOT NULL DEFAULT 0,     -- never cut this episode
     cut_failed INTEGER NOT NULL DEFAULT 0,
@@ -118,6 +118,9 @@ class Database:
             for name, ddl in cols:
                 if name not in have:
                     self.x(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
+        # Before 'incomplete' existed, failed downloads were reported as errors.
+        self.x("UPDATE episodes SET status='incomplete', error=NULL WHERE status='error' AND size < ?",
+               (config.MIN_EPISODE_BYTES,))
 
     @property
     def conn(self):

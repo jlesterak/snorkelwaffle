@@ -35,6 +35,12 @@
 
 ## [COMPLETED]
 
+- 2026-10-01: Files under 100 KB are marked "incomplete", not "error".
+  - On icebox, 42 of the 44 errors were 0-byte or stub Audiobookshelf
+    downloads. Only Dr. Gameshow "185. Sassy Caucus" has no good copy.
+  - The other 2 errors are a partial E474 download and a Vogue promo file
+    whose fingerprint came out empty. Both episodes already have a good copy.
+
 - 2026-09-23: Released v0.2.0.
 
 - 2026-09-23: Per-show modes (normal / review only / skip) and a "maybe a

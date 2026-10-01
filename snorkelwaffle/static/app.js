@@ -416,6 +416,7 @@ function epStatus(e) {
   if (e.status === "error") return `<span class="tag ad" title="${esc(e.error)}">error</span>`;
   if (e.status === "missing") return `<span class="tag plain">missing</span>`;
   if (e.status === "queued") return `<span class="tag pending">queued</span>`;
+  if (e.status === "incomplete") return `<span class="tag plain" title="Too small to be audio: a failed or partial download">incomplete</span>`;
   if (e.status === "skipped") return `<span class="tag plain" title="This show is set to Skip">skipped</span>`;
   if (e.excluded) return `<span class="tag plain">excluded</span>`;
   if (e.removed_seconds > 0) return `<span class="tag keep">cut</span>`;
