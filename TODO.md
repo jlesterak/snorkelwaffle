@@ -16,6 +16,14 @@
     than a missed ad.
   - Ship the new weights and default with a before/after table in the
     changelog.
+  - 2026-10-01: 454 clips user-decided (246 ad / 208 keep) and 800 pending,
+    all of them scoring under 60. At the current weights, a threshold of 75
+    gives 94% precision and 52% recall.
+  - Leads for the refit:
+    - The cross-show bonus fires on stings heard mostly on one show (all 8
+      false positives above 75).
+    - Duration is underweighted: clips under 20 s were 157 keep / 28 ad.
+    - "4+ episodes" and "moves around" reward short jingles.
 - Live trial on icebox (DockSTARTer, v0.2.0, port 8484), deployed 2026-09-24.
   - Still to do: set `SNORKELWAFFLE_ABS_TOKEN` in icebox's `.env` so cuts
     trigger Audiobookshelf rescans.
