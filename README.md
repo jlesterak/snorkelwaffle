@@ -55,7 +55,7 @@ out. See [CREDITS.md](CREDITS.md) for tools that do it.
 ## Quick start (DockSTARTer)
 
 1. The image is published as `ghcr.io/jlesterak/snorkelwaffle` (amd64 and arm64).
-   Tags: `latest`, `0.2`, `0.2.0` (and earlier versions). Pin a version with `SNORKELWAFFLE_IMAGE` if you prefer.
+   Tags: `latest`, `0.2`, `0.2.1` (and earlier versions). Pin a version with `SNORKELWAFFLE_IMAGE` if you prefer.
 2. Merge [`dockstarter/docker-compose.override.yml`](dockstarter/docker-compose.override.yml)
    into `~/.docker/compose/docker-compose.override.yml`.
 3. Optional: add the variables from [`dockstarter/env.example`](dockstarter/env.example)

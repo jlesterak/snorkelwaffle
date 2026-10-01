@@ -7,6 +7,8 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-01
+
 ### Changed
 - Audio files under 100 KB are now marked "incomplete" instead of "error",
   so failed downloads stop filling the problems list. Audiobookshelf leaves
@@ -73,6 +75,7 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 - Released under the Unlicense, with credits for prior art (MinusPod and
   others).
 
-[Unreleased]: https://github.com/jlesterak/snorkelwaffle/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/jlesterak/snorkelwaffle/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/jlesterak/snorkelwaffle/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/jlesterak/snorkelwaffle/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/jlesterak/snorkelwaffle/releases/tag/v0.1.0

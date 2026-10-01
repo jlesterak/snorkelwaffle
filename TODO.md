@@ -24,7 +24,8 @@
       false positives above 75).
     - Duration is underweighted: clips under 20 s were 157 keep / 28 ad.
     - "4+ episodes" and "moves around" reward short jingles.
-- Live trial on icebox (DockSTARTer, v0.2.0, port 8484), deployed 2026-09-24.
+- Live trial on icebox (DockSTARTer, v0.2.1, port 8484), deployed 2026-09-24
+  (v0.2.1 on 2026-10-01).
   - Still to do: set `SNORKELWAFFLE_ABS_TOKEN` in icebox's `.env` so cuts
     trigger Audiobookshelf rescans.
 
@@ -42,6 +43,8 @@
   use.
 
 ## [COMPLETED]
+
+- 2026-10-01: Released v0.2.1.
 
 - 2026-10-01: Files under 100 KB are marked "incomplete", not "error".
   - On icebox, 42 of the 44 errors were 0-byte or stub Audiobookshelf
