@@ -31,6 +31,10 @@
 
 ## [PENDING]
 
+- icebox deploy: `ABS_TOKEN` is empty, so Audiobookshelf rescans after cuts
+  never ran (found 2026-10-05). Create an ABS API key and set
+  `SNORKELWAFFLE_ABS_TOKEN` in the DockSTARTer env. Also log a warning at
+  startup when `ABS_URL` is set but the token is not.
 - Smaller image: Alpine's ffmpeg pulls in ~250 MB of codec libraries. A minimal
   static ffmpeg build (mp3/aac/opus/flac only) could get it under ~120 MB.
 - Optional pluggable detectors for host-read ads (Whisper and an LLM, off by
