@@ -7,6 +7,11 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## [Unreleased]
 
+### Added
+
+- A startup warning when `ABS_URL` is set without `ABS_TOKEN` (or the other way
+  round): Audiobookshelf rescans after cuts would otherwise never run, silently.
+
 ## [0.2.1] - 2026-10-01
 
 ### Changed

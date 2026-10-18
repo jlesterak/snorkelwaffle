@@ -49,6 +49,15 @@ class Env:
             log_level=_env("LOG_LEVEL", "INFO").upper(),
         )
 
+    def warnings(self):
+        """Config that half works: logged at startup so a missing value shows up before it is needed."""
+        out = []
+        if self.abs_url and not self.abs_token:
+            out.append("ABS_URL is set but ABS_TOKEN is not: Audiobookshelf rescans after cuts will not run")
+        if self.abs_token and not self.abs_url:
+            out.append("ABS_TOKEN is set but ABS_URL is not: Audiobookshelf rescans after cuts will not run")
+        return out
+
     def public(self):
         """Values safe to show in the UI (secrets masked)."""
         return {
