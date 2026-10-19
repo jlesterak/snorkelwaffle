@@ -32,6 +32,8 @@ def cmd_serve(env):
     ring = setup_logging(env.log_level)
     log = logging.getLogger("snorkelwaffle")
     log.info("snorkelwaffle %s starting; libraries: %s", __version__, ", ".join(env.library_dirs))
+    for w in env.warnings():
+        log.warning(w)
     db = Database(os.path.join(env.data_dir, "snorkelwaffle.db"))
     engine = Engine(db, env)
     abs_client = AbsClient(env.abs_url, env.abs_token, env.abs_library_id)
