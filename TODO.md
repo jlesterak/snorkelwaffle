@@ -44,40 +44,4 @@
 
 ## [COMPLETED]
 
-- 2026-10-01: Released v0.2.1.
-
-- 2026-10-01: Files under 100 KB are marked "incomplete", not "error".
-  - On icebox, 42 of the 44 errors were 0-byte or stub Audiobookshelf
-    downloads. Only Dr. Gameshow "185. Sassy Caucus" has no good copy.
-  - The other 2 errors are a partial E474 download and a Vogue promo file
-    whose fingerprint came out empty. Both episodes already have a good copy.
-
-- 2026-09-23: Released v0.2.0.
-
-- 2026-09-23: Per-show modes (normal / review only / skip) and a "maybe a
-  preview" hint.
-  - Tested on the Magic Tavern ad-free feed: its Patreon-episode preview is
-    now hinted, scored 45 and never auto-approved.
-  - Checked edge-seam (energy dip) as an automatic preview detector on real
-    episodes and rejected it. Previews are edited at pauses, just like ads.
-- 2026-09-23: Exact boundaries, ad confidence score, `confident`
-  auto-approve, cross-show discovery, and a schema v2 migration.
-  - Waveform alignment gives about ±50 ms on real episodes; tests assert
-    ±0.08 s.
-
-- 2026-09-23: GitHub repo, CI (ruff + pytest), and a tag-driven release
-  pipeline.
-  - Images go to `ghcr.io/jlesterak/snorkelwaffle`, multi-arch.
-  - Releases use SemVer, Keep a Changelog and Conventional Commits.
-
-- 2026-09-23: Initial build (v0.1.0).
-  - Chromaprint fingerprinting (ffmpeg muxer or fpcalc).
-  - Seed-and-extend matcher.
-  - Clip discovery, cross-library sweep and hints.
-  - Lossless in-place cutting that keeps chapters, tags and cover art.
-  - Originals with a size and age cap; restore.
-  - Audiobookshelf rescan.
-  - Web UI (overview, review, episodes, settings, log).
-  - Docker image (Alpine, PUID/PGID), DockSTARTer override.
-  - Unlicense and credits.
-  - Test suite (7 tests, all passing locally and inside the image).
+Releases v0.1.0 to v0.2.1 (2026-09-23 to 2026-10-01): see `CHANGELOG.md`.
