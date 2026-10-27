@@ -6,8 +6,9 @@
   episodes.
   - Detection, cutting, intro/outro hints and exact boundaries are confirmed.
   - Still to do: tune confidence weights against more reviewed clips.
-- Data-driven auto-approve, blocked until icebox finishes scanning and every
-  clip has been reviewed by hand.
+- Data-driven auto-approve, blocked until every clip has been reviewed by hand.
+  Library scan is done (2026-10-26: 5,205 episodes analysed, none queued);
+  review stands at 524 decided (268 ad / 256 keep) and 849 pending.
   - Copy icebox's `/config/snorkelwaffle.db` into `testdata/` (gitignored).
   - Analyse the user-decided clips (`ad` / `keep`) against confidence and
     each feature: shows, episodes, position, duration, BER, hint.
@@ -24,10 +25,6 @@
       false positives above 75).
     - Duration is underweighted: clips under 20 s were 157 keep / 28 ad.
     - "4+ episodes" and "moves around" reward short jingles.
-- Live trial on icebox (DockSTARTer, v0.2.1, port 8484), deployed 2026-09-24
-  (v0.2.1 on 2026-10-01).
-  - `SNORKELWAFFLE_ABS_TOKEN` set in icebox's `.env` (owner, 2026-10-19), so
-    cuts now trigger Audiobookshelf rescans. Confirm on the next real cut.
 
 ## [PENDING]
 
@@ -44,4 +41,7 @@
 
 ## [COMPLETED]
 
-Releases v0.1.0 to v0.2.1 (2026-09-23 to 2026-10-01): see `CHANGELOG.md`.
+- [COMPLETED] 2026-10-26: live trial on icebox (DockSTARTer, port 8484, v0.2.1 since
+  2026-10-01). Audiobookshelf rescans confirmed on real cuts (logs 2026-10-23 and
+  2026-10-25) after `SNORKELWAFFLE_ABS_TOKEN` was set (owner, 2026-10-19).
+- Releases v0.1.0 to v0.2.1 (2026-09-23 to 2026-10-01): see `CHANGELOG.md`.
