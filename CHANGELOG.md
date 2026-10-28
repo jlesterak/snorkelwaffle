@@ -7,7 +7,16 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## [Unreleased]
 
-## [0.3.0] - 2026-10-28
+## [0.3.1] - 2026-10-28
+
+### Fixed
+
+- Release builds: CI and release workflows now run on `ubuntu-24.04`. GitHub's
+  `ubuntu-latest` moved to 26.04, whose ffmpeg 8.0 fails one end-to-end test.
+  v0.3.0 was tagged but never published for this reason; 0.3.1 ships the same
+  code. The image itself uses Debian's ffmpeg 7.1, which passes the full suite.
+
+## [0.3.0] - 2026-10-28 [YANKED]
 
 ### Added
 
@@ -142,7 +151,8 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 - Released under the Unlicense, with credits for prior art (MinusPod and
   others).
 
-[Unreleased]: https://github.com/jlesterak/snorkelwaffle/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/jlesterak/snorkelwaffle/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/jlesterak/snorkelwaffle/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/jlesterak/snorkelwaffle/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/jlesterak/snorkelwaffle/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/jlesterak/snorkelwaffle/compare/v0.1.0...v0.2.0
