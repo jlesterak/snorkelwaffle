@@ -93,10 +93,11 @@ SETTINGS = [
               "shows are cut automatically (network-inserted ads). confident: clips whose ad "
               "confidence reaches the threshold below are cut automatically; the rest wait for review. "
               "Clips that look like intros/outros are never auto-approved."),
-    dict(key="auto_approve_min_confidence", type="int", default=85, min=50, max=100, group="Cutting",
+    dict(key="auto_approve_min_confidence", type="int", default=75, min=50, max=100, group="Cutting",
          label="Auto-approve threshold",
-         help="Ad confidence (0-100) needed for 'confident' auto-approve. Heard on 2+ shows scores ~70-85; "
-              "adding a standard ad length (15/30/60 s) or moving around pushes it past 85."),
+         help="Ad confidence (0-100) needed for 'confident' auto-approve. A clean match heard on 2+ shows "
+              "(no one show dominating) at ad length scores 75 or more; a clip heard on one show never "
+              "goes above 55."),
     dict(key="pad_start", type="float", default=0.0, min=-5, max=5, group="Cutting",
          label="Start padding (s)",
          help="Extra seconds to cut before each ad. Negative values cut less."),

@@ -1,3 +1,3 @@
-# Status (2026-10-26)
-Released v0.2.1; running on icebox (port 8484), library scan finished, Audiobookshelf rescans confirmed on real cuts (2026-10-23/25).
-Next: refit ad-confidence weights once manual review finishes (524 decided, 849 pending; threshold 75 gave 94% precision / 52% recall on the 10-01 set).
+# Status (2026-10-28)
+Released v0.2.1; running on icebox (port 8484), but the container was found stopped (exited 0, about 16 h earlier) on 2026-10-28.
+Ad confidence refitted on 526 reviewed clips (unreleased): default threshold 75, 71 ad / 0 keep on the labelled set. Next: release it, then fix `multi_show` the same way. Re-run the check with `testdata/refit-2026-10-28/verify_real.py`.

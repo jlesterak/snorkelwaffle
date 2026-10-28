@@ -5,29 +5,18 @@
 - Real-episode validation, local copies in `testdata/` of 5 shows × 5
   episodes.
   - Detection, cutting, intro/outro hints and exact boundaries are confirmed.
-  - Still to do: tune confidence weights against more reviewed clips.
-- Data-driven auto-approve, blocked until every clip has been reviewed by hand.
-  Library scan is done (2026-10-26: 5,205 episodes analysed, none queued);
-  review stands at 524 decided (268 ad / 256 keep) and 849 pending.
-  - Copy icebox's `/config/snorkelwaffle.db` into `testdata/` (gitignored).
-  - Analyse the user-decided clips (`ad` / `keep`) against confidence and
-    each feature: shows, episodes, position, duration, BER, hint.
-  - Refit the `ad_confidence` weights and pick a single default threshold
-    with a strict precision target, since cutting real content costs more
-    than a missed ad.
-  - Ship the new weights and default with a before/after table in the
-    changelog.
-  - 2026-10-01: 454 clips user-decided (246 ad / 208 keep) and 800 pending,
-    all of them scoring under 60. At the current weights, a threshold of 75
-    gives 94% precision and 52% recall.
-  - Leads for the refit:
-    - The cross-show bonus fires on stings heard mostly on one show (all 8
-      false positives above 75).
-    - Duration is underweighted: clips under 20 s were 157 keep / 28 ad.
-    - "4+ episodes" and "moves around" reward short jingles.
+- Keep reviewing pending clips (848 on 2026-10-28). Once many more are
+  decided, re-run the refit check to tighten the precision bound.
 
 ## [PENDING]
 
+- `multi_show` auto-approve has the same flaw the refit fixed: it fires on a
+  show's own sting that one other show played (labelled: 85 ad / 9 keep).
+  Either apply the same "no show holds 90%+" rule or drop the mode in favour of
+  `confident`.
+- Cut ads lose their occurrence rows when the episode is re-analysed, so their
+  ad score and episode count in the UI drop to 0 afterwards. Keep the
+  pre-cut stats or skip recomputing decided clips.
 - Smaller image: Alpine's ffmpeg pulls in ~250 MB of codec libraries. A minimal
   static ffmpeg build (mp3/aac/opus/flac only) could get it under ~120 MB.
 - Optional pluggable detectors for host-read ads (Whisper and an LLM, off by
@@ -41,6 +30,8 @@
 
 ## [COMPLETED]
 
+- [COMPLETED] 2026-10-28: ad-confidence refit on 526 reviewed clips; the default
+  threshold is now 75 (71 ad / 0 keep at 75, was 85 / 9 at 85). See `CHANGELOG.md`.
 - [COMPLETED] 2026-10-26: live trial on icebox (DockSTARTer, port 8484, v0.2.1 since
   2026-10-01). Audiobookshelf rescans confirmed on real cuts (logs 2026-10-23 and
   2026-10-25) after `SNORKELWAFFLE_ABS_TOKEN` was set (owner, 2026-10-19).

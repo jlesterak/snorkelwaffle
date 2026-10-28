@@ -83,7 +83,7 @@ class EngineTest(unittest.TestCase):
         self.assertEqual(ad1["show_count"], 2)      # heard on Show A and Show B
         self.assertEqual(ad1["episode_count"], 4)
         self.assertIn("different shows", ad1["suggestion"])
-        self.assertGreaterEqual(ad1["confidence"], 85)   # 2 shows + standard 30 s length
+        self.assertGreaterEqual(ad1["confidence"], 75)   # 2 shows + standard 30 s length
         self.assertTrue(ad1["ref_path"])
 
         theme = min(clips, key=lambda c: abs(c["duration"] - 12))

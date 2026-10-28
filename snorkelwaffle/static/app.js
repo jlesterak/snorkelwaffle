@@ -210,7 +210,7 @@ function suggestionTag(s) {
 function confidenceTag(c) {
   if (c.suggestion && c.suggestion.kind === "theme") return "";  // intros/outros: an ad score would mislead
   const n = c.confidence ?? 0;
-  const cls = n >= 85 ? "ad" : n >= 60 ? "pending" : "plain";
+  const cls = n >= 75 ? "ad" : n >= 60 ? "pending" : "plain";
   return `<span class="tag ${cls}" title="How likely this is an ad (0-100). Used by 'confident' auto-approve.">Ad score ${n}</span>`;
 }
 function timeRange(o) {

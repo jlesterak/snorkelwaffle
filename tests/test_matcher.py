@@ -51,11 +51,23 @@ if __name__ == "__main__":
 class HintTest(unittest.TestCase):
     def test_excerpt_hint(self):
         from snorkelwaffle.engine import ad_confidence, suggest
-        rows = [{"start": 100, "end": 157.6, "duration": 3000, "ber": 0.05, "id": 1},
-                {"start": 2000, "end": 2057.6, "duration": 3600, "ber": 0.05, "id": 2}]
+        rows = [{"start": 100, "end": 157.6, "duration": 3000, "ber": 0.05, "id": 1, "show": "A"},
+                {"start": 2000, "end": 2057.6, "duration": 3600, "ber": 0.05, "id": 2, "show": "A"}]
         sugg = suggest(57.6, rows, 1, 2)
         self.assertEqual(sugg["kind"], "excerpt")
         self.assertLess(ad_confidence(57.6, rows, 1, 2, sugg), 50)
         # A real 60 s ad heard twice is not penalised.
         rows60 = [dict(r, end=r["start"] + 60.0) for r in rows]
         self.assertNotEqual(suggest(60.0, rows60, 1, 2)["kind"], "excerpt")
+
+    def test_one_show_sting_heard_elsewhere_is_not_confident(self):
+        # Real false positives before 0.3: a 16 s show sting, 11 episodes of
+        # its own show plus one cross-promo elsewhere, scored 100.
+        from snorkelwaffle.engine import ad_confidence, suggest
+        rows = [{"start": 60 + 300 * i, "end": 76 + 300 * i, "duration": 3600, "ber": 0.04, "id": i,
+                 "show": "Own" if i < 11 else "Other"} for i in range(12)]
+        sugg = suggest(16.0, rows, 2, 12)
+        self.assertLess(ad_confidence(16.0, rows, 2, 12, sugg), 75)
+        # The same 30 s clip spread evenly over two shows is a network ad.
+        even = [dict(r, end=r["start"] + 30, show="Own" if r["id"] % 2 else "Other") for r in rows]
+        self.assertGreaterEqual(ad_confidence(30.0, even, 2, 12, suggest(30.0, even, 2, 12)), 75)

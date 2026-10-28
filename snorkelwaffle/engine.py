@@ -721,32 +721,35 @@ def is_standard_ad_length(duration):
 def ad_confidence(duration, occ_rows, show_count, ep_count, sugg):
     """0-100: how sure we are a clip is an ad. Drives "confident" auto-approve.
 
-    Signals, strongest first: heard on several shows (network-inserted); a
-    standard ad length (exact once boundaries are refined); moving around
-    between or within episodes; clean matches; lots of repeats. Intros and
-    outros score low because they sit at the same spot every time.
+    Fitted on 526 hand-reviewed clips (2026-10-28, see CHANGELOG).
+    Signals, strongest first: heard on several shows with no one show
+    dominating (network-inserted); a standard ad length (exact once
+    boundaries are refined); clean matches. Short stings score low: most
+    clips under 20 s were show jingles. Moving around and repeating a lot
+    are not used, because recurring jingles do both. Intros and outros score
+    low because they sit at the same spot every time. A clip heard on one
+    show tops out at 55, so it always waits for review at the default
+    threshold.
     """
     if sugg and sugg["kind"] == "theme":
         return 5
     score = 35
     if sugg and sugg["kind"] == "excerpt":
         score -= 10
-    if show_count >= 2:
+    per_show = {}
+    for r in occ_rows:
+        per_show[r["show"]] = per_show.get(r["show"], 0) + 1
+    # A show's own sting that one other show also played (a cross-promo) is not a network ad.
+    if show_count >= 2 and per_show and max(per_show.values()) < 0.9 * len(occ_rows):
         score += 35 + 5 * min(3, show_count - 2)
-    if is_standard_ad_length(duration):
+    if duration < 20:
+        score -= 20
+    elif is_standard_ad_length(duration):
         score += 15
-    elif 10 <= duration <= 130:
+    elif duration <= 130:
         score += 5
     elif duration > 180:
         score -= 15
-    starts = [r["start"] for r in occ_rows]
-    per_episode = {}
-    for r in occ_rows:
-        per_episode[r["id"]] = per_episode.get(r["id"], 0) + 1
-    if (len(starts) > 1 and statistics.pstdev(starts) > 30) or any(n > 1 for n in per_episode.values()):
-        score += 10
-    if ep_count >= 4:
-        score += 5
     bers = [r["ber"] for r in occ_rows if r["ber"]]
     if bers:
         mean_ber = sum(bers) / len(bers)

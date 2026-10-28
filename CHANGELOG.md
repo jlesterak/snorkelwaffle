@@ -7,6 +7,37 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Ad confidence refitted on 526 hand-reviewed clips (268 ad / 258 keep, icebox
+  2026-10-28), and the default `confident` auto-approve threshold lowered from
+  85 to 75. Target: at least 98% precision, because cutting real content costs
+  more than missing an ad.
+  - The cross-show bonus now needs the clip spread across shows: no single
+    show may hold 90% or more of its occurrences. Every false positive at the
+    old default was a show's own sting that one other show also played.
+  - Clips under 20 s lose 20 points (214 of the 243 reviewed were keeps).
+  - Dropped the "moves around" (+10) and "4+ episodes" (+5) bonuses:
+    recurring show jingles do both, so they rewarded the wrong clips.
+  - A clip heard on one show now tops out at 55 and always waits for review;
+    no single-show rule reached the precision target (best: 94%).
+
+  Labelled clips (TP = ad cut, FP = real content cut), old vs new scoring:
+
+  | Threshold | Old TP / FP | New TP / FP |
+  |---|---|---|
+  | 65 | 117 / 44 | 71 / 0 |
+  | 70 | 96 / 22 | 71 / 0 |
+  | **75 (new default)** | 85 / 9 | **71 / 0** |
+  | 85 (old default) | 85 / 9 | 44 / 0 |
+
+  Recall at the new default is 26% (71 of 268 ads), and precision is 100% on
+  this set. With 0 errors in 71, the false-cut rate is under about 4%
+  (rule of three), and the bound tightens as more clips are reviewed. Cut ads
+  lose their occurrences when the episode is re-analysed, so their features
+  were rebuilt from the cuts log. A saved threshold in Settings is kept; only
+  the default changes.
+
 ### Added
 
 - A startup warning when `ABS_URL` is set without `ABS_TOKEN` (or the other way

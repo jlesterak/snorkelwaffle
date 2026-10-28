@@ -47,7 +47,7 @@ out. See [CREDITS.md](CREDITS.md) for tools that do it.
 
    It also gets an **ad score** from 0 to 100. You mark it **Ad** (cut
    everywhere) or **Keep**. With auto-approve set to `confident`, clips
-   scoring 85 or more are cut without asking and the rest wait for you.
+   scoring 75 or more are cut without asking and the rest wait for you.
 6. **Cut.** Every episode containing an approved ad is cut losslessly. It is
    then re-fingerprinted to confirm the ad is gone, and Audiobookshelf is asked
    to rescan.
@@ -80,9 +80,11 @@ progress), then open **Review**:
 - **Where?** lists every episode containing the clip. Its play buttons add 3 s
   either side so you can check the boundaries.
 - Once you trust it, set **Auto-approve** to `confident`. Clips with an ad
-  score of 85 or more are then cut without asking, and lower scores wait for
-  review. `multi_show` is a stricter option: it only auto-cuts clips heard on
-  2 or more shows.
+  score of 75 or more are then cut without asking, and lower scores wait for
+  review. In practice that means clean matches at ad length heard across
+  several shows; anything heard on one show always waits for you.
+  `multi_show` is a stricter option: it only auto-cuts clips heard on 2 or
+  more shows.
 
 To see what it would do before any file changes, turn **Cutting enabled** off
 in Settings. Everything else (analysis, discovery, review) keeps working.
