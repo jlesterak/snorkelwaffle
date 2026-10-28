@@ -10,6 +10,14 @@
 
 ## [PENDING]
 
+- Transcript signal (prototype 2026-10-28, `testdata/whisper-proto/`): faster-whisper
+  `base.en` on each clip preview (labelled 5.8 h of audio in 28 min, 4 threads).
+  On one-show clips, 2+ ad-word hits at 20–130 s gave 77 ad / 3 keep. Together
+  with the multi-show rule that is 148 ad / 3 keep overall: about 98% precision,
+  and recall rises from 26% to 55%. The remaining misses are a show's own
+  promos and mailbag. Next: decide whether to ship it as an optional detector,
+  or first try the local LLM (`~/llm` Qwen3-4B) to judge "third-party sponsor vs
+  the show's own content". Status: waiting on that decision.
 - `multi_show` auto-approve has the same flaw the refit fixed: it fires on a
   show's own sting that one other show played (labelled: 85 ad / 9 keep).
   Either apply the same "no show holds 90%+" rule or drop the mode in favour of
