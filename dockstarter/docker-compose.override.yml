@@ -27,4 +27,4 @@ services:
     ports:
       - ${SNORKELWAFFLE_PORT_8484:-8484}:8484
     cpus: ${SNORKELWAFFLE_CPUS:-1.0}
-    mem_limit: ${SNORKELWAFFLE_MEM_LIMIT:-512m}
+    mem_limit: ${SNORKELWAFFLE_MEM_LIMIT:-1g}

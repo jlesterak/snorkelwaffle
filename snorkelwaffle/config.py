@@ -121,10 +121,10 @@ SETTINGS = [
               "to discover new repeated clips."),
     dict(key="transcribe_clips", type="bool", default=False, group="Detection",
          label="Transcribe clips",
-         help="Transcribe each clip with Whisper (base.en, downloads ~145 MB once) and give clips that "
-              "sound like a sponsor read (promo codes, URLs, 'sponsored by') +35 ad score. Lets one-show "
-              "ads reach auto-approve. Runs at the lowest priority; the first pass over an existing "
-              "library takes hours of CPU, then a few seconds per new clip."),
+         help="Transcribe 20-130 s clips with Whisper (base.en, downloads ~145 MB once) and give those "
+              "that sound like a sponsor read (promo codes, URLs, 'sponsored by') +35 ad score. Lets "
+              "one-show ads reach auto-approve. Needs about 1 GB of memory. Runs at the lowest priority; "
+              "the first pass over an existing library takes hours of CPU, then seconds per new clip."),
     dict(key="min_repeats", type="int", default=1, min=1, max=10, group="Detection",
          label="Minimum repeats",
          help="A new clip must be found in at least this many other episodes."),

@@ -29,9 +29,9 @@ reused across episodes. It **can't** catch host-read ads that are different
 every time; that needs whole-episode transcription, which this project leaves
 out. See [CREDITS.md](CREDITS.md) for tools that do it.
 
-With **Transcribe clips** on (Settings → Detection), each clip found is run
-through Whisper (`base.en`, CPU, ~145 MB model downloaded once into
-`/config/models`). A clip of 20–130 s whose transcript holds two or more sponsor
+With **Transcribe clips** on (Settings → Detection), each clip of 20–130 s is
+run through Whisper (`base.en`, CPU, ~145 MB model downloaded once into
+`/config/models`). A clip whose transcript holds two or more sponsor
 phrases (promo codes, URLs, "sponsored by") gets +35 ad score. That lets ads heard
 on one show reach `confident` auto-approve: on 526 reviewed clips it doubled what
 auto-approve catches, from 26% to 52% of ads, at 99% precision. The transcript
@@ -141,8 +141,9 @@ than guessed at.
 
 ## Resource notes for a QNAP (or any small NAS)
 
-- The compose files cap the container at 1 CPU and 512 MB. Real use is far
-  below that (about 50 MB), or about 330 MB with Transcribe clips on.
+- The compose files cap the container at 1 CPU and 1 GB. Without transcription,
+  real use is far below that (about 50 MB). With Transcribe clips on, Whisper
+  alone peaks at about 600 MB; 512 MB is too little.
 - The first pass over a big back catalogue is the heaviest step, because every
   file is decoded once. Expect roughly 5–15 s per hour of audio on a Celeron,
   running in the background at idle priority. After that, only new episodes
@@ -151,9 +152,9 @@ than guessed at.
 - Originals take as much space as the files they back up, which is why the cap
   exists.
 - Transcribe clips (optional) uses one thread at idle priority, after analysis
-  and cutting. The first pass over existing clips takes hours on a small CPU
-  (about 12 hours of clip audio for 1,400 clips); after that, each new clip
-  takes seconds.
+  and cutting. The first pass over existing clips takes hours on a small CPU:
+  on a busy 3-vCPU VM, about 30–45 s per clip, and 1,374 clips had 548 in the
+  20–130 s range. After that, each new clip takes seconds.
 
 ## CLI
 

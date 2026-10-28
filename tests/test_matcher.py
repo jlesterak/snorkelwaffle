@@ -92,3 +92,16 @@ class TranscriptTest(unittest.TestCase):
         # Long in-character bits and intros never get the bonus.
         self.assertLess(ad_confidence(200.0, rows, 1, 3, None, ad), 75)
         self.assertEqual(ad_confidence(30.0, rows, 1, 3, {"kind": "theme"}, ad), 5)
+
+    def test_only_scorable_clips_are_transcribed(self):
+        import tempfile
+
+        from snorkelwaffle import config
+        from snorkelwaffle.db import Database
+        from snorkelwaffle.engine import Engine
+        with tempfile.TemporaryDirectory() as d:
+            db = Database(f"{d}/t.db")
+            eng = Engine(db, config.Env(library_dirs=[d], data_dir=d, nice=0))
+            for cid, dur in ((1, 12.0), (2, 200.0), (3, 30.0)):
+                db.x("INSERT INTO clips (id, fp, duration, preview, created_at) VALUES (?, x'00', ?, 'p.mp3', 0)", (cid, dur))
+            self.assertEqual(eng.next_untranscribed_clip()["id"], 3)

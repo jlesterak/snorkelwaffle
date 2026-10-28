@@ -37,6 +37,9 @@ EDGE_ITEMS = 16
 # (encoder priming makes the first few values unreliable), so it can't carry
 # the usual ~1 s calibration lead.
 START_EDGE_ITEMS = 8
+# Only clips this long can earn the transcript bonus, so only these are
+# transcribed (longer ones were mostly in-character bits worth keeping).
+TRANSCRIPT_SECONDS = (20, 130)
 
 ClipRef = namedtuple("ClipRef", "id fp show fp_offset start duration ref_path")
 Occ = namedtuple("Occ", "clip_id s_item e_item start end ber refined")
@@ -474,7 +477,8 @@ class Engine:
 
     # --------------------------------------------------- refinement backfill
     def next_untranscribed_clip(self):
-        return self.db.q1("SELECT id FROM clips WHERE transcript_tried=0 AND preview IS NOT NULL LIMIT 1")
+        return self.db.q1("SELECT id FROM clips WHERE transcript_tried=0 AND preview IS NOT NULL"
+                          " AND duration BETWEEN ? AND ? LIMIT 1", TRANSCRIPT_SECONDS)
 
     def transcribe_clip(self, cid, settings):
         try:
@@ -782,7 +786,8 @@ def ad_confidence(duration, occ_rows, show_count, ep_count, sugg, transcript=Non
     elif duration > 180:
         score -= 15
     # Two or more sponsor phrases at ad length: 77 ad / 3 keep on one-show clips (2026-10-28).
-    if transcript and 20 <= duration <= 130 and transcribe.ad_word_hits(transcript) >= 2:
+    lo, hi = TRANSCRIPT_SECONDS
+    if transcript and lo <= duration <= hi and transcribe.ad_word_hits(transcript) >= 2:
         score += 35
     bers = [r["ber"] for r in occ_rows if r["ber"]]
     if bers:

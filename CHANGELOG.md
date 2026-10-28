@@ -7,6 +7,18 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-28
+
+### Changed
+
+- Transcribe clips now only transcribes 20–130 s clips, the only ones that can
+  earn the transcript bonus. On icebox that is 548 of 1,374 clips (7.0 of
+  11.9 h of audio). It also lowers peak memory (Whisper alone: 602 MiB, was
+  660 MiB). The clip page shows no transcript for clips outside that range.
+- The default memory limit in `docker-compose.yml` and the DockSTARTer override
+  is now 1 GB (was 512 MB), because transcription needs about 600 MB. The 0.3.0
+  notes under-stated this: the measurement covered one short clip.
+
 ## [0.3.1] - 2026-10-28
 
 ### Fixed
@@ -156,7 +168,8 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 - Released under the Unlicense, with credits for prior art (MinusPod and
   others).
 
-[Unreleased]: https://github.com/jlesterak/snorkelwaffle/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/jlesterak/snorkelwaffle/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/jlesterak/snorkelwaffle/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/jlesterak/snorkelwaffle/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/jlesterak/snorkelwaffle/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/jlesterak/snorkelwaffle/compare/v0.2.0...v0.2.1
