@@ -11,6 +11,8 @@ import queue
 import threading
 import time
 
+from . import transcribe
+
 log = logging.getLogger(__name__)
 
 
@@ -137,6 +139,13 @@ class Worker(threading.Thread):
                 name = self.db.q1("SELECT name FROM episodes WHERE id=?", (row["id"],))["name"]
                 self._set(f"cutting {name}")
                 eng.cut(row["id"], settings)
+                return True
+
+        if settings["transcribe_clips"] and not eng.transcribe_broken and transcribe.available():
+            row = eng.next_untranscribed_clip()
+            if row:
+                self._set(f"transcribing clip #{row['id']}")
+                eng.transcribe_clip(row["id"], settings)
                 return True
 
         eng.enforce_originals_cap(settings)

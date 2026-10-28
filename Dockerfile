@@ -1,15 +1,19 @@
-# snorkelwaffle: small, CPU-only image. No PyTorch, no models, no GPU.
-FROM python:3.12-alpine
+# snorkelwaffle: CPU-only image. No PyTorch, no GPU, no models baked in.
+# Debian, not Alpine: faster-whisper's engine (ctranslate2) only ships glibc wheels.
+FROM python:3.12-slim
 
-# ffmpeg cuts audio; chromaprint's fpcalc fingerprints it (Alpine's ffmpeg has
-# no chromaprint muxer, and the two give the same values). su-exec drops to
-# PUID/PGID.
-RUN apk add --no-cache ffmpeg chromaprint su-exec \
- && fpcalc -version
+# ffmpeg cuts audio and fingerprints it (Debian's build has the chromaprint
+# muxer). gosu drops to PUID/PGID.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ffmpeg gosu \
+ && rm -rf /var/lib/apt/lists/* \
+ && ffmpeg -hide_banner -muxers | grep -q chromaprint
 
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# faster-whisper is only used when "Transcribe clips" is on; its model downloads
+# into /config/models on first use.
+RUN pip install --no-cache-dir -r requirements.txt faster-whisper==1.2.1
 COPY snorkelwaffle ./snorkelwaffle
 COPY docker/entrypoint.sh /entrypoint.sh
 
@@ -17,7 +21,8 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     DATA_DIR=/config \
     LIBRARY_DIRS=/storage/media/podcasts \
-    PORT=8484
+    PORT=8484 \
+    HF_HUB_DISABLE_TELEMETRY=1
 
 EXPOSE 8484
 VOLUME /config

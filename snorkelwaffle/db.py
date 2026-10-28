@@ -110,7 +110,8 @@ class Database:
         """Add columns introduced after v0.1.0 to existing databases."""
         added = {
             "clips": [("confidence", "INTEGER NOT NULL DEFAULT 0"), ("ref_path", "TEXT"),
-                      ("refine_tried", "INTEGER NOT NULL DEFAULT 0")],
+                      ("refine_tried", "INTEGER NOT NULL DEFAULT 0"), ("transcript", "TEXT"),
+                      ("transcript_tried", "INTEGER NOT NULL DEFAULT 0")],
             "occurrences": [("refined", "INTEGER NOT NULL DEFAULT 0")],
         }
         for table, cols in added.items():

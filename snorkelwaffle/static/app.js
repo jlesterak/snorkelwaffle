@@ -374,6 +374,7 @@ async function renderClip(id) {
     <div class="row">${c.has_preview ? playButton(`/api/clips/${c.id}/preview`) : ""}
       <h1 style="margin:0">${fmtClipLen(c.duration)} clip #${c.id}</h1> ${statusTag(c)} ${suggestionTag(c.suggestion)} ${confidenceTag(c)}</div>
     <p class="sub" style="margin-top:8px">First found in <strong>${esc(c.source_show)}</strong> · heard in ${c.episode_count} episode(s) across ${c.show_count} show(s)${d.cut_episodes ? ` · cut from ${d.cut_episodes} episode(s) so far` : ""}${c.suggestion ? ` · ${esc(c.suggestion.reason)}` : ""}</p>
+    ${c.transcript ? `<p class="sub" title="Whisper transcript (Settings → Transcribe clips)">“${esc(c.transcript)}”</p>` : ""}
     <div class="row">
       <button class="btn ad ${c.status === "ad" ? "on" : ""}" data-set="ad">Ad: cut it everywhere</button>
       <button class="btn keep ${c.status === "keep" ? "on" : ""}" data-set="keep">Keep</button>

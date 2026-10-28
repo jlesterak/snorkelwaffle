@@ -123,7 +123,7 @@ class App:
         return {"items": items, "total": total, "counts": counts}
 
     def get_clip(self, req, cid):
-        clip = self.db.q1(f"SELECT {CLIP_COLS} FROM clips WHERE id=?", (cid,))
+        clip = self.db.q1(f"SELECT {CLIP_COLS}, transcript FROM clips WHERE id=?", (cid,))
         if clip is None:
             raise HttpError(404, "no such clip")
         occ = self.db.q("SELECT o.id, o.start, o.end, o.ber, o.refined, e.id AS episode_id, e.name, e.show,"

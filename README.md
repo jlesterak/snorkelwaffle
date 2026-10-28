@@ -4,8 +4,9 @@ Finds audio that repeats across your podcast episodes, such as the same ads
 stitched into every file your podcast server downloaded. You review each
 repeated clip **once**, and it cuts the ads out of every episode in place.
 
-- **No cloud, no GPU, no LLM, no transcription.** It works from Chromaprint
-  audio fingerprints and plain numpy.
+- **No cloud, no GPU, no LLM.** It works from Chromaprint audio fingerprints
+  and plain numpy. Transcribing clips (not episodes) is optional and off by
+  default.
 - **Built for a NAS.** One worker runs one job at a time at idle CPU and IO
   priority. Idle memory is ~30 MB. A one-hour episode takes a few seconds to
   fingerprint, and comparing two episodes takes milliseconds.
@@ -25,8 +26,16 @@ repeated clip **once**, and it cuts the ads out of every episode in place.
 It catches ads that are **the same audio** in more than one place:
 dynamically inserted ads, network promos, and pre-recorded sponsor reads
 reused across episodes. It **can't** catch host-read ads that are different
-every time; that needs transcription, which this project deliberately leaves
+every time; that needs whole-episode transcription, which this project leaves
 out. See [CREDITS.md](CREDITS.md) for tools that do it.
+
+With **Transcribe clips** on (Settings → Detection), each clip found is run
+through Whisper (`base.en`, CPU, ~145 MB model downloaded once into
+`/config/models`). A clip of 20–130 s whose transcript holds two or more sponsor
+phrases (promo codes, URLs, "sponsored by") gets +35 ad score. That lets ads heard
+on one show reach `confident` auto-approve: on 526 reviewed clips it doubled what
+auto-approve catches, from 26% to 52% of ads, at 99% precision. The transcript
+is also shown on the clip page.
 
 ## How it works
 
@@ -126,14 +135,14 @@ than guessed at.
 | Group | Settings |
 |---|---|
 | Cutting | Cutting enabled, auto-approve (`off` / `multi_show` / `confident`) and its threshold, start/end padding, Audiobookshelf rescan |
-| Detection | Shortest and longest clip, same-show and other-show episodes to compare, minimum repeats, exact boundaries, match across shows, match tolerance |
+| Detection | Shortest and longest clip, same-show and other-show episodes to compare, minimum repeats, exact boundaries, match across shows, match tolerance, transcribe clips |
 | Library | Scan interval, settle time (skip files still downloading), backlog window |
 | Originals | Size cap (GB) and maximum age (days). A cap of 0 keeps nothing, which means cuts can't be undone. |
 
 ## Resource notes for a QNAP (or any small NAS)
 
 - The compose files cap the container at 1 CPU and 512 MB. Real use is far
-  below that.
+  below that (about 50 MB), or about 330 MB with Transcribe clips on.
 - The first pass over a big back catalogue is the heaviest step, because every
   file is decoded once. Expect roughly 5–15 s per hour of audio on a Celeron,
   running in the background at idle priority. After that, only new episodes
@@ -141,6 +150,10 @@ than guessed at.
 - Fingerprints take ~115 KB per hour of audio in the SQLite database.
 - Originals take as much space as the files they back up, which is why the cap
   exists.
+- Transcribe clips (optional) uses one thread at idle priority, after analysis
+  and cutting. The first pass over existing clips takes hours on a small CPU
+  (about 12 hours of clip audio for 1,400 clips); after that, each new clip
+  takes seconds.
 
 ## CLI
 

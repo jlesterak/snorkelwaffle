@@ -22,7 +22,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from . import config, cutter, fingerprint, refine
+from . import config, cutter, fingerprint, refine, transcribe
 from .db import now
 from .matcher import MatchParams, Prepared, find_matches, subtract_ranges
 
@@ -50,6 +50,7 @@ class Engine:
         self.previews_dir = os.path.join(env.data_dir, "previews")
         self.tmp_dir = os.path.join(env.data_dir, "tmp")
         self.refs_dir = os.path.join(env.data_dir, "refs")
+        self.transcribe_broken = False
         for d in (self.originals_dir, self.previews_dir, self.tmp_dir, self.refs_dir):
             os.makedirs(d, exist_ok=True)
         self._clips = {}  # id -> ClipRef
@@ -461,6 +462,25 @@ class Engine:
         return added
 
     # --------------------------------------------------- refinement backfill
+    def next_untranscribed_clip(self):
+        return self.db.q1("SELECT id FROM clips WHERE transcript_tried=0 AND preview IS NOT NULL LIMIT 1")
+
+    def transcribe_clip(self, cid, settings):
+        try:
+            transcribe.load_model(self.env.data_dir)
+        except Exception as exc:  # noqa: BLE001 - e.g. offline on first use; retried after a restart
+            log.error("Transcription is off until restart: could not load the model: %s", exc)
+            self.transcribe_broken = True
+            return
+        row = self.db.q1("SELECT preview FROM clips WHERE id=?", (cid,))
+        text = None
+        try:
+            text = transcribe.transcribe(row["preview"], self.env.data_dir)
+        except Exception as exc:  # noqa: BLE001 - a bad clip must not stall the queue
+            log.warning("Could not transcribe clip %d: %s", cid, exc)
+        self.db.x("UPDATE clips SET transcript=?, transcript_tried=1 WHERE id=?", (text, cid))
+        self.update_clip_stats([cid], settings)
+
     def next_unrefined_clip(self):
         return self.db.q1("SELECT id FROM clips WHERE refine_tried=0 LIMIT 1")
 
@@ -549,7 +569,7 @@ class Engine:
             shows = {r["show"] for r in rows}
             show_count = len(shows)
             sugg = suggest(clip["duration"], rows, show_count, ep_count)
-            score = ad_confidence(clip["duration"], rows, show_count, ep_count, sugg)
+            score = ad_confidence(clip["duration"], rows, show_count, ep_count, sugg, clip["transcript"])
             status, decided_by, decided_at = clip["status"], clip["decided_by"], clip["decided_at"]
             # Clips heard only in "review only" shows (e.g. ad-free feeds) always wait for a human.
             review_only = bool(shows) and all(modes.get(s) == "review_only" for s in shows)
@@ -718,7 +738,7 @@ def is_standard_ad_length(duration):
     return any(abs(duration - n) <= 1.0 for n in STANDARD_AD_LENGTHS)
 
 
-def ad_confidence(duration, occ_rows, show_count, ep_count, sugg):
+def ad_confidence(duration, occ_rows, show_count, ep_count, sugg, transcript=None):
     """0-100: how sure we are a clip is an ad. Drives "confident" auto-approve.
 
     Fitted on 526 hand-reviewed clips (2026-10-28, see CHANGELOG).
@@ -728,8 +748,8 @@ def ad_confidence(duration, occ_rows, show_count, ep_count, sugg):
     clips under 20 s were show jingles. Moving around and repeating a lot
     are not used, because recurring jingles do both. Intros and outros score
     low because they sit at the same spot every time. A clip heard on one
-    show tops out at 55, so it always waits for review at the default
-    threshold.
+    show tops out at 55, so it waits for review at the default threshold,
+    unless its transcript (optional) sounds like a sponsor read.
     """
     if sugg and sugg["kind"] == "theme":
         return 5
@@ -750,6 +770,9 @@ def ad_confidence(duration, occ_rows, show_count, ep_count, sugg):
         score += 5
     elif duration > 180:
         score -= 15
+    # Two or more sponsor phrases at ad length: 77 ad / 3 keep on one-show clips (2026-10-28).
+    if transcript and 20 <= duration <= 130 and transcribe.ad_word_hits(transcript) >= 2:
+        score += 35
     bers = [r["ber"] for r in occ_rows if r["ber"]]
     if bers:
         mean_ber = sum(bers) / len(bers)

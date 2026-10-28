@@ -71,3 +71,24 @@ class HintTest(unittest.TestCase):
         # The same 30 s clip spread evenly over two shows is a network ad.
         even = [dict(r, end=r["start"] + 30, show="Own" if r["id"] % 2 else "Other") for r in rows]
         self.assertGreaterEqual(ad_confidence(30.0, even, 2, 12, suggest(30.0, even, 2, 12)), 75)
+
+
+class TranscriptTest(unittest.TestCase):
+    """Transcript scoring only; no Whisper needed."""
+
+    def test_sponsor_read_lifts_one_show_clip(self):
+        from snorkelwaffle.engine import ad_confidence
+        from snorkelwaffle.transcribe import ad_word_hits
+        ad = ("This episode is brought to you by Factor. Go to factormeals.com slash podcast "
+              "and use code PODCAST for 50 percent off your first box.")
+        mailbag = "Thanks for all your letters, and keep them coming."
+        self.assertGreaterEqual(ad_word_hits(ad), 2)
+        self.assertLess(ad_word_hits(mailbag), 2)
+        rows = [{"start": 600 + 900 * i, "end": 630 + 900 * i, "duration": 3600, "ber": 0.04, "id": i,
+                 "show": "Own"} for i in range(3)]
+        self.assertLessEqual(ad_confidence(30.0, rows, 1, 3, None), 55)
+        self.assertLessEqual(ad_confidence(30.0, rows, 1, 3, None, mailbag), 55)
+        self.assertGreaterEqual(ad_confidence(30.0, rows, 1, 3, None, ad), 75)
+        # Long in-character bits and intros never get the bonus.
+        self.assertLess(ad_confidence(200.0, rows, 1, 3, None, ad), 75)
+        self.assertEqual(ad_confidence(30.0, rows, 1, 3, {"kind": "theme"}, ad), 5)

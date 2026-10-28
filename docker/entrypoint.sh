@@ -9,6 +9,6 @@ umask "${UMASK:-002}"
 mkdir -p "$DATA_DIR"
 if [ "$(id -u)" = "0" ]; then
   chown -R "$PUID:$PGID" "$DATA_DIR"
-  exec su-exec "$PUID:$PGID" "$@"
+  exec gosu "$PUID:$PGID" "$@"
 fi
 exec "$@"

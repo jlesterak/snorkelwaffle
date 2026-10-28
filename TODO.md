@@ -10,14 +10,6 @@
 
 ## [PENDING]
 
-- Transcript signal (prototype 2026-10-28, `testdata/whisper-proto/`): faster-whisper
-  `base.en` on each clip preview (labelled 5.8 h of audio in 28 min, 4 threads).
-  On one-show clips, 2+ ad-word hits at 20–130 s gave 77 ad / 3 keep. Together
-  with the multi-show rule that is 148 ad / 3 keep overall: about 98% precision,
-  and recall rises from 26% to 55%. The remaining misses are a show's own
-  promos and mailbag. Next: decide whether to ship it as an optional detector,
-  or first try the local LLM (`~/llm` Qwen3-4B) to judge "third-party sponsor vs
-  the show's own content". Status: waiting on that decision.
 - `multi_show` auto-approve has the same flaw the refit fixed: it fires on a
   show's own sting that one other show played (labelled: 85 ad / 9 keep).
   Either apply the same "no show holds 90%+" rule or drop the mode in favour of
@@ -25,8 +17,11 @@
 - Cut ads lose their occurrence rows when the episode is re-analysed, so their
   ad score and episode count in the UI drop to 0 afterwards. Keep the
   pre-cut stats or skip recomputing decided clips.
-- Smaller image: Alpine's ffmpeg pulls in ~250 MB of codec libraries. A minimal
-  static ffmpeg build (mp3/aac/opus/flac only) could get it under ~120 MB.
+- Smaller image (now 1.44 GB unpacked since the Debian switch): a
+  static ffmpeg build with chromaprint, and installing faster-whisper without
+  onnxruntime (68 MB, only used for VAD, which is off). Only if size matters.
+- Release 0.3.0 (refit + transcripts): bump `__version__`, date the CHANGELOG
+  section, tag. Needs Jake's OK to push and tag on GitHub.
 - Optional pluggable detectors for host-read ads (Whisper and an LLM, off by
   default and never required).
 - UI: waveform view for adjusting a single occurrence's boundaries by hand.
@@ -38,6 +33,10 @@
 
 ## [COMPLETED]
 
+- [COMPLETED] 2026-10-28: optional clip transcripts (faster-whisper `base.en`), giving
+  a +35 ad-score bonus for sponsor phrases. Labelled: 140 ad / 1 keep at 75 (was
+  71 / 0). Image moved to Debian slim. Prototype and evaluation scripts are in
+  `testdata/whisper-proto/`.
 - [COMPLETED] 2026-10-28: ad-confidence refit on 526 reviewed clips; the default
   threshold is now 75 (71 ad / 0 keep at 75, was 85 / 9 at 85). See `CHANGELOG.md`.
 - [COMPLETED] 2026-10-26: live trial on icebox (DockSTARTer, port 8484, v0.2.1 since

@@ -7,7 +7,41 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Optional clip transcripts (Settings → Detection → Transcribe clips, off by
+  default). Each clip preview is transcribed once with faster-whisper
+  (`base.en`, CPU, int8, 1 thread, downloaded into `/config/models` on first
+  use). A clip of 20–130 s with two or more sponsor phrases (promo code, URL,
+  "sponsored by", "free trial", …) gets +35 ad score. That is enough for an
+  ad heard on only one show to reach `confident` auto-approve. The clip page
+  shows the transcript.
+
+  Labelled clips (TP = ad cut, FP = real content cut), scored by the code in
+  this release with and without transcripts:
+
+  | Threshold | Without TP / FP | With TP / FP |
+  |---|---|---|
+  | 65 | 71 / 0 | 144 / 2 |
+  | 70 | 71 / 0 | 143 / 2 |
+  | **75 (default)** | **71 / 0** (26% of ads) | **140 / 1** (52% of ads, 99.3% precision) |
+  | 85 | 44 / 0 | 89 / 1 |
+
+  The one false positive is a song lyric ("go to …") in a show's own jingle.
+  The keepers that hold sponsor phrases are mostly long in-character ads,
+  which is why the bonus stops at 130 s.
+
+- A startup warning when `ABS_URL` is set without `ABS_TOKEN` (or the other way
+  round): Audiobookshelf rescans after cuts would otherwise never run, silently.
+
 ### Changed
+
+- The image is now based on `python:3.12-slim` (Debian) instead of Alpine,
+  because faster-whisper's engine (ctranslate2) ships only glibc wheels.
+  Fingerprinting now uses Debian ffmpeg's chromaprint muxer instead of
+  `fpcalc`, and `gosu` replaces `su-exec`. The image grows from 96 MB to
+  360 MB compressed (378 MB to 1.44 GB unpacked): about half is Debian's
+  ffmpeg, half is faster-whisper and its dependencies.
 
 - Ad confidence refitted on 526 hand-reviewed clips (268 ad / 258 keep, icebox
   2026-10-28), and the default `confident` auto-approve threshold lowered from
@@ -37,11 +71,6 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
   lose their occurrences when the episode is re-analysed, so their features
   were rebuilt from the cuts log. A saved threshold in Settings is kept; only
   the default changes.
-
-### Added
-
-- A startup warning when `ABS_URL` is set without `ABS_TOKEN` (or the other way
-  round): Audiobookshelf rescans after cuts would otherwise never run, silently.
 
 ## [0.2.1] - 2026-10-01
 
