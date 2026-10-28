@@ -7,6 +7,8 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-28
+
 ### Added
 
 - Optional clip transcripts (Settings → Detection → Transcribe clips, off by
@@ -140,7 +142,8 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 - Released under the Unlicense, with credits for prior art (MinusPod and
   others).
 
-[Unreleased]: https://github.com/jlesterak/snorkelwaffle/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/jlesterak/snorkelwaffle/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/jlesterak/snorkelwaffle/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/jlesterak/snorkelwaffle/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/jlesterak/snorkelwaffle/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/jlesterak/snorkelwaffle/releases/tag/v0.1.0

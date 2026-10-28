@@ -20,8 +20,6 @@
 - Smaller image (now 1.44 GB unpacked since the Debian switch): a
   static ffmpeg build with chromaprint, and installing faster-whisper without
   onnxruntime (68 MB, only used for VAD, which is off). Only if size matters.
-- Release 0.3.0 (refit + transcripts): bump `__version__`, date the CHANGELOG
-  section, tag. Needs Jake's OK to push and tag on GitHub.
 - Optional pluggable detectors for host-read ads (Whisper and an LLM, off by
   default and never required).
 - UI: waveform view for adjusting a single occurrence's boundaries by hand.
@@ -33,6 +31,7 @@
 
 ## [COMPLETED]
 
+- [COMPLETED] 2026-10-28: released v0.3.0 (refit + optional clip transcripts).
 - [COMPLETED] 2026-10-28: optional clip transcripts (faster-whisper `base.en`), giving
   a +35 ad-score bonus for sponsor phrases. Labelled: 140 ad / 1 keep at 75 (was
   71 / 0). Image moved to Debian slim. Prototype and evaluation scripts are in
