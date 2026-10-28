@@ -11,10 +11,15 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 ### Fixed
 
-- Release builds: CI and release workflows now run on `ubuntu-24.04`. GitHub's
-  `ubuntu-latest` moved to 26.04, whose ffmpeg 8.0 fails one end-to-end test.
-  v0.3.0 was tagged but never published for this reason; 0.3.1 ships the same
-  code. The image itself uses Debian's ffmpeg 7.1, which passes the full suite.
+- Works with ffmpeg 8. Known clips now only have to match all but their
+  unreliable edge values (the same ~2 s allowance already used for edges),
+  not the full minimum clip length. Under ffmpeg 8's MP3 decoding, a 9.9 s
+  outro matched 64 of the 65 required values after a cut, so it stopped being
+  recognised. Discovery of new clips still requires the full minimum. The test
+  suite passes on ffmpeg 6.1, 7.1 (the image) and 8.0.
+- v0.3.0 was tagged but never published: GitHub's `ubuntu-latest` moved to
+  ffmpeg 8 and the release tests failed on the issue above. 0.3.1 includes
+  everything listed under 0.3.0.
 
 ## [0.3.0] - 2026-10-28 [YANKED]
 

@@ -10,10 +10,6 @@
 
 ## [PENDING]
 
-- ffmpeg 8 compatibility: on ubuntu-26.04 (ffmpeg 8.0.1),
-  `test_full_flow` keeps 1 of 2 non-ad clips after a cut (theme/outro no longer
-  matched in the cut episode). CI is pinned to ubuntu-24.04 until this is
-  understood; Debian's ffmpeg 7.1 in the image is fine.
 - `multi_show` auto-approve has the same flaw the refit fixed: it fires on a
   show's own sting that one other show played (labelled: 85 ad / 9 keep).
   Either apply the same "no show holds 90%+" rule or drop the mode in favour of

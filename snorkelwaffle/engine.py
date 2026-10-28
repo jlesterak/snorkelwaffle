@@ -12,6 +12,7 @@ Boundaries come from fingerprints first (about ±1 s), then, where the audio
 allows, from waveform alignment (about ±50 ms); see refine.py.
 """
 
+import dataclasses
 import json
 import logging
 import os
@@ -61,6 +62,16 @@ class Engine:
     def params(self, settings):
         return MatchParams(min_items=max(8, fingerprint.seconds_to_items(settings["min_clip_seconds"])),
                            max_bits=settings["max_bits"])
+
+    @staticmethod
+    def _known_clip_params(clip, params):
+        """A known clip only has to match all but its unreliable edge items.
+
+        Without this, a clip barely longer than the minimum loses its match over
+        one or two noisy edge values (seen with ffmpeg 8's MP3 decoding).
+        """
+        need = max(8, min(params.min_items, len(clip.fp) - EDGE_ITEMS))
+        return params if need == params.min_items else dataclasses.replace(params, min_items=need)
 
     def _locate(self, path):
         for root in self.env.library_dirs:
@@ -297,7 +308,7 @@ class Engine:
         for clip in self.refresh_clip_cache().values():
             if not settings["cross_show"] and clip.show != show:
                 continue
-            for m in find_matches(clip.fp, prep, params):
+            for m in find_matches(clip.fp, prep, self._known_clip_params(clip, params)):
                 start, end, refined = self._occurrence_span(clip, m, fp_len, duration, path, settings)
                 out.append(Occ(clip.id, m.b_start, m.b_end, start, end, m.ber, refined))
         return out
@@ -446,7 +457,7 @@ class Engine:
 
     def _record_matches(self, clip, ep_id, efp, duration, params, prep=None, settings=None):
         """Insert occurrences of ``clip`` in episode ``ep_id`` that aren't recorded yet."""
-        ms = find_matches(clip.fp, prep if prep is not None else efp, params)
+        ms = find_matches(clip.fp, prep if prep is not None else efp, self._known_clip_params(clip, params))
         if not ms:
             return 0
         ep = self.db.q1("SELECT path FROM episodes WHERE id=?", (ep_id,))
