@@ -2,6 +2,8 @@
 
 ## [IN PROGRESS]
 
+- icebox: Transcribe clips backlog running (548 clips, 2026-10-28). When it
+  is done, Jake decides whether to set auto-approve to `confident`.
 - Real-episode validation, local copies in `testdata/` of 5 shows × 5
   episodes.
   - Detection, cutting, intro/outro hints and exact boundaries are confirmed.
@@ -31,7 +33,7 @@
 
 ## [COMPLETED]
 
-- [COMPLETED] 2026-10-28: released v0.3.1 (refit + optional clip transcripts; v0.3.0 tag never published).
+- [COMPLETED] 2026-10-28: released v0.3.1 and v0.3.2 (refit, optional clip transcripts, ffmpeg 8 matching fix, 1 GB memory default); v0.3.0 tag never published. icebox on 0.3.2 with transcripts on.
 - [COMPLETED] 2026-10-28: optional clip transcripts (faster-whisper `base.en`), giving
   a +35 ad-score bonus for sponsor phrases. Labelled: 140 ad / 1 keep at 75 (was
   71 / 0). Image moved to Debian slim. Prototype and evaluation scripts are in
