@@ -590,14 +590,19 @@ class Engine:
             review_only = bool(shows) and all(modes.get(s) == "review_only" for s in shows)
             if status == "pending" and not review_only and (sugg is None or sugg["kind"] not in ("theme", "excerpt")):
                 mode = settings["auto_approve"]
-                if (mode == "multi_show" and show_count >= 2) or (
+                if (mode == "multi_show" and cross_show(rows, show_count)) or (
                         mode == "confident" and score >= settings["auto_approve_min_confidence"]):
                     status, decided_by, decided_at = "ad", "auto", now()
                     log.info("Auto-approved clip %d as ad (confidence %d)", cid, score)
+            sugg_json = json.dumps(sugg) if sugg else None
+            # Re-analysing a cut episode drops a decided clip's occurrences for good: keep its stats.
+            if status != "pending" and (ep_count < clip["episode_count"] or show_count < clip["show_count"]):
+                ep_count = max(ep_count, clip["episode_count"])
+                show_count = max(show_count, clip["show_count"])
+                sugg_json, score = clip["suggestion"], clip["confidence"]
             self.db.x("UPDATE clips SET episode_count=?, show_count=?, suggestion=?, confidence=?, status=?,"
                       " decided_by=?, decided_at=? WHERE id=?",
-                      (ep_count, show_count, json.dumps(sugg) if sugg else None, score, status, decided_by,
-                       decided_at, cid))
+                      (ep_count, show_count, sugg_json, score, status, decided_by, decided_at, cid))
 
     def refresh_all_stats(self, settings):
         """Recompute counts, hints and confidence for every clip (startup, upgrades)."""
@@ -753,6 +758,17 @@ def is_standard_ad_length(duration):
     return any(abs(duration - n) <= 1.0 for n in STANDARD_AD_LENGTHS)
 
 
+def cross_show(occ_rows, show_count):
+    """True when a clip is heard on 2+ shows and no one show holds 90%+ of its occurrences.
+
+    A show's own sting that one other show also played (a cross-promo) is not a network ad.
+    """
+    per_show = {}
+    for r in occ_rows:
+        per_show[r["show"]] = per_show.get(r["show"], 0) + 1
+    return show_count >= 2 and bool(per_show) and max(per_show.values()) < 0.9 * len(occ_rows)
+
+
 def ad_confidence(duration, occ_rows, show_count, ep_count, sugg, transcript=None):
     """0-100: how sure we are a clip is an ad. Drives "confident" auto-approve.
 
@@ -771,11 +787,7 @@ def ad_confidence(duration, occ_rows, show_count, ep_count, sugg, transcript=Non
     score = 35
     if sugg and sugg["kind"] == "excerpt":
         score -= 10
-    per_show = {}
-    for r in occ_rows:
-        per_show[r["show"]] = per_show.get(r["show"], 0) + 1
-    # A show's own sting that one other show also played (a cross-promo) is not a network ad.
-    if show_count >= 2 and per_show and max(per_show.values()) < 0.9 * len(occ_rows):
+    if cross_show(occ_rows, show_count):
         score += 35 + 5 * min(3, show_count - 2)
     if duration < 20:
         score -= 20

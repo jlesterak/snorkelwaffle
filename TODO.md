@@ -12,13 +12,6 @@
 
 ## [PENDING]
 
-- `multi_show` auto-approve has the same flaw the refit fixed: it fires on a
-  show's own sting that one other show played (labelled: 85 ad / 9 keep).
-  Either apply the same "no show holds 90%+" rule or drop the mode in favour of
-  `confident`.
-- Cut ads lose their occurrence rows when the episode is re-analysed, so their
-  ad score and episode count in the UI drop to 0 afterwards. Keep the
-  pre-cut stats or skip recomputing decided clips.
 - Smaller image (now 1.44 GB unpacked since the Debian switch): a
   static ffmpeg build with chromaprint, and installing faster-whisper without
   onnxruntime (68 MB, only used for VAD, which is off). Only if size matters.
@@ -33,6 +26,10 @@
 
 ## [COMPLETED]
 
+- [COMPLETED] 2026-11-03: `multi_show` auto-approve now requires that no one
+  show holds 90%+ of a clip's occurrences (same rule as the ad score).
+- [COMPLETED] 2026-11-03: decided clips keep their counts and ad score after a
+  cut episode is re-analysed (counts never go down for ad/keep clips).
 - [COMPLETED] 2026-10-28: released v0.3.1 and v0.3.2 (refit, optional clip transcripts, ffmpeg 8 matching fix, 1 GB memory default); v0.3.0 tag never published. icebox on 0.3.2 with transcripts on.
 - [COMPLETED] 2026-10-28: optional clip transcripts (faster-whisper `base.en`), giving
   a +35 ad-score bonus for sponsor phrases. Labelled: 140 ad / 1 keep at 75 (was

@@ -7,6 +7,18 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- `multi_show` auto-approve now uses the same rule as the ad score: a clip
+  counts as cross-show only when no one show holds 90% or more of its
+  occurrences. Before, a show's own sting that one other show also played was
+  auto-approved (labelled clips matching the old rule: 85 ad / 9 keep). The ad
+  score itself is unchanged.
+- Decided clips (ad or keep) no longer lose their episode count, show count and
+  ad score when a cut episode is re-analysed and the ad's occurrences are gone.
+  Their counts never go down, and the stored score and hint are kept when the
+  new counts are lower. Pending clips are recomputed as before.
+
 ## [0.3.2] - 2026-10-28
 
 ### Changed

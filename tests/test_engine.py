@@ -193,6 +193,42 @@ class EngineTest(unittest.TestCase):
         self.assertEqual(ad1["show_count"], 2)
         self.assertEqual(ad1["status"], "ad")  # now also heard in a normal show, with a high score
 
+    def fake_clip(self, db, occ_per_show, duration=30.0, status="pending"):
+        """A clip with ``n`` occurrences (one per episode) in each show, without audio."""
+        cid = db.x("INSERT INTO clips (fp, duration, status, created_at) VALUES (x'', ?, ?, 0)",
+                   (duration, status)).lastrowid
+        for show, n in occ_per_show.items():
+            for i in range(n):
+                eid = db.x("INSERT INTO episodes (path, library, show, name, duration, status, discovered_at)"
+                           " VALUES (?, 'lib', ?, ?, 1800, 'analyzed', 0)",
+                           (f"/x/{show}/{cid}-{i}.mp3", show, f"{cid}-{i}")).lastrowid
+                db.x("INSERT INTO occurrences (clip_id, episode_id, start, end) VALUES (?, ?, ?, ?)",
+                     (cid, eid, 100 + i, 100 + i + duration))
+        return cid
+
+    def test_multi_show_needs_spread_across_shows(self):
+        db, eng = self.make_engine()
+        s = db.put_settings({"auto_approve": "multi_show"})
+        sting = self.fake_clip(db, {"Show A": 19, "Show B": 1})   # one show holds 95%
+        network = self.fake_clip(db, {"Show A": 3, "Show B": 2})
+        eng.update_clip_stats([sting, network], s)
+        status = {r["id"]: r["status"] for r in db.q("SELECT id, status FROM clips")}
+        self.assertEqual(status[sting], "pending")
+        self.assertEqual(status[network], "ad")
+
+    def test_decided_clip_keeps_stats_after_reanalysis(self):
+        db, eng = self.make_engine()
+        s = db.get_settings()
+        cid = self.fake_clip(db, {"Show A": 3, "Show B": 2}, status="ad")
+        eng.update_clip_stats([cid], s)
+        before = db.q1("SELECT episode_count, show_count, confidence FROM clips WHERE id=?", (cid,))
+        self.assertEqual((before["episode_count"], before["show_count"]), (5, 2))
+        # Cut and re-analysed: the ad is gone from those episodes, so its occurrences are too.
+        db.x("DELETE FROM occurrences WHERE clip_id=?", (cid,))
+        eng.update_clip_stats([cid], s)
+        after = db.q1("SELECT episode_count, show_count, confidence FROM clips WHERE id=?", (cid,))
+        self.assertEqual(tuple(after), tuple(before))
+
     def test_incomplete_download(self):
         db, eng = self.make_engine()
         s = db.get_settings()
