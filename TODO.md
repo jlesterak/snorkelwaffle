@@ -2,13 +2,15 @@
 
 ## [IN PROGRESS]
 
-- icebox: Transcribe clips backlog running (548 clips, 2026-10-28). When it
-  is done, Jake decides whether to set auto-approve to `confident`.
+- Jake decides whether to set auto-approve to `confident` (threshold 75; still
+  `off` on icebox 2026-11-11). The transcript backlog is done (0 eligible clips
+  left untranscribed, checked in the live DB 2026-11-11).
 - Real-episode validation, local copies in `testdata/` of 5 shows × 5
   episodes.
   - Detection, cutting, intro/outro hints and exact boundaries are confirmed.
-- Keep reviewing pending clips (848 on 2026-10-28). Once many more are
-  decided, re-run the refit check to tighten the precision bound.
+- Keep reviewing pending clips (1,392 pending, 526 decided on 2026-11-11; 848
+  pending on 2026-10-28). Once many more are decided, re-run the refit check to
+  tighten the precision bound.
 
 ## [PENDING]
 
@@ -37,7 +39,5 @@
   `testdata/whisper-proto/`.
 - [COMPLETED] 2026-10-28: ad-confidence refit on 526 reviewed clips; the default
   threshold is now 75 (71 ad / 0 keep at 75, was 85 / 9 at 85). See `CHANGELOG.md`.
-- [COMPLETED] 2026-10-26: live trial on icebox (DockSTARTer, port 8484, v0.2.1 since
-  2026-10-01). Audiobookshelf rescans confirmed on real cuts (logs 2026-10-23 and
-  2026-10-25) after `SNORKELWAFFLE_ABS_TOKEN` was set (owner, 2026-10-19).
+- [COMPLETED] 2026-10-26: live trial on icebox (DockSTARTer, port 8484); Audiobookshelf rescans confirmed on real cuts.
 - Releases v0.1.0 to v0.2.1 (2026-09-23 to 2026-10-01): see `CHANGELOG.md`.
