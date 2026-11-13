@@ -1,3 +1,3 @@
-# Status (2026-11-11)
+# Status (2026-11-13)
 Released v0.3.3 (multi_show needs a cross-show spread; decided clips keep their stats), 2026-11-03. Live on icebox (0.3.3, Transcribe clips on; checked 2026-11-11).
-Transcript backlog finished (0 eligible clips left, checked 2026-11-11); 1,392 clips pending review, 526 decided. Auto-approve still `off`: set it to `confident` (threshold 75) once Jake is happy; labelled set gives 140 ad / 1 keep at 75.
+Transcript backlog finished (0 eligible clips left, checked 2026-11-11); 1,392 clips pending review, 526 decided. Auto-approve still `off`. Unreleased on `main` (2026-11-13, not pushed, not deployed): a stricter ad score after the 2026-11-11 spot-check found 3 wrong and 3 unsure in 20 confident clips. Held-out test at threshold 75: 48 ads / 0 keeps cut (recall 44%; was 58 / 0, 54%), at most 5.3 wrong cuts per 100 at 95% confidence. Measured on the 2026-10-28 database copy (server unreachable 2026-11-13): re-run `scripts/eval_confidence.py` on a live copy before turning auto-approve on; next steps in `TODO.md`.

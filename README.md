@@ -31,11 +31,15 @@ out. See [CREDITS.md](CREDITS.md) for tools that do it.
 
 With **Transcribe clips** on (Settings → Detection), each clip of 20–130 s is
 run through Whisper (`base.en`, CPU, ~145 MB model downloaded once into
-`/config/models`). A clip whose transcript holds two or more sponsor
-phrases (promo codes, URLs, "sponsored by") gets +35 ad score. That lets ads heard
-on one show reach `confident` auto-approve: on 526 reviewed clips it doubled what
-auto-approve catches, from 26% to 52% of ads, at 99% precision. The transcript
-is also shown on the clip page.
+`/config/models`). A clip whose transcript reads like a sponsor message (a
+URL, promo code or "sponsored by", plus one more sponsor phrase) gets +35 ad
+score. That lets ads heard on one show reach `confident` auto-approve: on 526
+reviewed clips auto-approve catches 46% of ads (26% without transcripts) and
+cut nothing that was marked Keep. A show's own Patreon or membership pitch,
+a one-show read longer than 100 s, and music heard on two feeds (few words,
+no sponsor wording) all wait for review instead. The transcript is also shown
+on the clip page. To check the score against your own decisions, run
+`scripts/eval_confidence.py` on a copy of the database.
 
 ## How it works
 

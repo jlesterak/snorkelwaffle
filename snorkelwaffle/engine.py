@@ -40,6 +40,8 @@ START_EDGE_ITEMS = 8
 # Only clips this long can earn the transcript bonus, so only these are
 # transcribed (longer ones were mostly in-character bits worth keeping).
 TRANSCRIPT_SECONDS = (20, 130)
+# A clip heard on one show only earns the bonus up to this length.
+ONE_SHOW_READ_SECONDS = 100
 
 ClipRef = namedtuple("ClipRef", "id fp show fp_offset start duration ref_path")
 Occ = namedtuple("Occ", "clip_id s_item e_item start end ber refined")
@@ -772,22 +774,31 @@ def cross_show(occ_rows, show_count):
 def ad_confidence(duration, occ_rows, show_count, ep_count, sugg, transcript=None):
     """0-100: how sure we are a clip is an ad. Drives "confident" auto-approve.
 
-    Fitted on 526 hand-reviewed clips (2026-10-28, see CHANGELOG).
+    Fitted on 526 hand-reviewed clips (2026-10-28), tightened 2026-11-13 after
+    a spot-check of confident clips found a theme song, an in-character bit
+    and house pitches among them (see CHANGELOG).
     Signals, strongest first: heard on several shows with no one show
-    dominating (network-inserted); a standard ad length (exact once
-    boundaries are refined); clean matches. Short stings score low: most
-    clips under 20 s were show jingles. Moving around and repeating a lot
-    are not used, because recurring jingles do both. Intros and outros score
-    low because they sit at the same spot every time. A clip heard on one
-    show tops out at 55, so it waits for review at the default threshold,
-    unless its transcript (optional) sounds like a sponsor read.
+    dominating (network-inserted); a transcript (optional) that reads like a
+    sponsor message; a standard ad length (exact once boundaries are
+    refined); clean matches. Short stings score low: most clips under 20 s
+    were show jingles. Moving around and repeating a lot are not used,
+    because recurring jingles do both. Intros and outros score low because
+    they sit at the same spot every time. A clip heard on one show tops out
+    at 55, so it waits for review at the default threshold, unless its
+    transcript is a sponsor read.
+
+    The transcript can also count against a clip. Heard on several shows but
+    without sponsor wording, and either without an ad's dense talk or with
+    the show talking about itself, it is more likely something two feeds of
+    one podcast share (a theme song, a sign-off) than an ad.
     """
     if sugg and sugg["kind"] == "theme":
         return 5
     score = 35
     if sugg and sugg["kind"] == "excerpt":
         score -= 10
-    if cross_show(occ_rows, show_count):
+    network = cross_show(occ_rows, show_count)
+    if network:
         score += 35 + 5 * min(3, show_count - 2)
     if duration < 20:
         score -= 20
@@ -797,10 +808,14 @@ def ad_confidence(duration, occ_rows, show_count, ep_count, sugg, transcript=Non
         score += 5
     elif duration > 180:
         score -= 15
-    # Two or more sponsor phrases at ad length: 77 ad / 3 keep on one-show clips (2026-10-28).
     lo, hi = TRANSCRIPT_SECONDS
-    if transcript and lo <= duration <= hi and transcribe.ad_word_hits(transcript) >= 2:
-        score += 35
+    if transcript and lo <= duration <= hi:
+        # On one show, reads over 100 s were in-character bits as often as ads.
+        if transcribe.is_sponsor_read(transcript) and (network or duration <= ONE_SHOW_READ_SECONDS):
+            score += 35
+        elif network and (transcribe.is_house_talk(transcript) or transcribe.words_per_second(
+                transcript, duration) < transcribe.TALK_WORDS_PER_SECOND):
+            score -= 15
     bers = [r["ber"] for r in occ_rows if r["ber"]]
     if bers:
         mean_ber = sum(bers) / len(bers)

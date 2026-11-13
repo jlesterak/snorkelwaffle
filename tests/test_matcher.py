@@ -93,6 +93,63 @@ class TranscriptTest(unittest.TestCase):
         self.assertLess(ad_confidence(200.0, rows, 1, 3, None, ad), 75)
         self.assertEqual(ad_confidence(30.0, rows, 1, 3, {"kind": "theme"}, ad), 5)
 
+    # The next four are the wrong or doubtful "confident" clips from the 2026-11-11 spot-check.
+    @staticmethod
+    def _rows(seconds, shows, n=6):
+        return [{"start": 600 + 700 * i, "end": 600 + 700 * i + seconds, "duration": 3600, "ber": 0.04, "id": i,
+                 "show": shows[i % len(shows)]} for i in range(n)]
+
+    def test_theme_song_on_two_feeds_is_not_confident(self):
+        # A show's closing song, heard in two feeds of the same podcast (clips 1639, 1630).
+        from snorkelwaffle.engine import ad_confidence, suggest
+        lyrics = "The summer is here at last, the sky is overcast, and no one brings a rose for her. " * 2
+        promo = ("Hi, I'm Sam, and I'm Alex, and we host Round the Table, a new show about board games. "
+                 "Every week we sit down with a designer and pull apart one game, rule by rule, to find out why it "
+                 "works and where it falls over. We have covered classics, new releases and a few total disasters. "
+                 "If that sounds like your kind of thing, find Round the Table wherever you listen. " * 2)
+        for seconds in (32.0, 49.0):
+            rows = self._rows(seconds, ["Serial", "S-Town"])
+            sugg = suggest(seconds, rows, 2, 6)
+            self.assertLess(ad_confidence(seconds, rows, 2, 6, sugg, lyrics), 75)
+        # A network promo is dense talk, so it stays confident without any sponsor wording.
+        rows = self._rows(49.0, ["Serial", "S-Town"])
+        self.assertGreaterEqual(ad_confidence(49.0, rows, 2, 6, suggest(49.0, rows, 2, 6), promo), 75)
+
+    def test_song_lyrics_with_loose_ad_words_are_not_a_sponsor_read(self):
+        # Clip 89: a theme song whose lyrics hit "go to" three times.
+        from snorkelwaffle.engine import ad_confidence
+        from snorkelwaffle.transcribe import ad_word_hits, is_sponsor_read
+        lyrics = "Tonight we go to town, we go to make some noise, we go to turn it up loud."
+        self.assertGreaterEqual(ad_word_hits(lyrics), 2)
+        self.assertFalse(is_sponsor_read(lyrics))
+        self.assertLess(ad_confidence(30.0, self._rows(30.0, ["Own"]), 1, 6, None, lyrics), 75)
+
+    def test_long_one_show_read_waits_for_review(self):
+        # Clip 365: a 122 s in-character bit with a sponsor read inside it.
+        from snorkelwaffle.engine import ad_confidence
+        bit = ("Well guys, I gotta go, I'm taking my new best friend out to a very fancy dinner because I saved a "
+               "bunch of money. Join at budgetbear.com. That's budgetbear.com slash riddle. Let the bear pay.")
+        self.assertLess(ad_confidence(122.0, self._rows(122.0, ["Own"]), 1, 6, None, bit), 75)
+        self.assertGreaterEqual(ad_confidence(60.0, self._rows(60.0, ["Own"]), 1, 6, None, bit), 75)
+
+    def test_house_pitch_is_not_a_sponsor_read(self):
+        # Clips 1518 and 1782: the show's own Patreon or membership appeal, also when a sponsor read follows it.
+        from snorkelwaffle.engine import ad_confidence, suggest
+        from snorkelwaffle.transcribe import is_sponsor_read
+        patreon = ("This is an independent, listener supported podcast. We rely on donations. Sign up at "
+                   "patreon.com slash ourshow for a bonus episode every month and access to the discord.")
+        fused = ("Thanks to Rebecca, a member of our membership program. Sign up at ourshow.org slash join. "
+                 "This episode is sponsored by Acme. Go to acme.com slash show for 20 percent off.")
+        # A sign-off two sister feeds share (pending clip 1290; clip 1297 was marked Keep).
+        signoff = ("Thank you for listening to the Island Spanish podcast. To get access to show notes for all of "
+                   "our lessons, visit islandspanish.com and sign up so you hear about it every time a new lesson "
+                   "is available. We will see you in the next one, and until then keep practising every day.")
+        for text in (patreon, fused, signoff):
+            self.assertFalse(is_sponsor_read(text))
+            self.assertLess(ad_confidence(43.0, self._rows(43.0, ["Own"]), 1, 6, None, text), 75)
+        rows = self._rows(43.0, ["Island Spanish", "Sister Feed"])
+        self.assertLess(ad_confidence(43.0, rows, 2, 6, suggest(43.0, rows, 2, 6), signoff), 75)
+
     def test_only_scorable_clips_are_transcribed(self):
         import tempfile
 

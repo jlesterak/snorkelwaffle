@@ -7,6 +7,49 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The ad score is stricter about what a transcript proves. A 2026-11-11
+  spot-check of 20 clips scoring 75 or more found 3 that were not ads (a
+  show's closing song heard in two feeds of the same podcast, twice, and an
+  in-character bit) and 3 house pitches. Target: nothing marked Keep is cut on
+  the reviewed clips (precision 99% or better), and none of those six kinds of
+  clip reaches 75.
+  - The +35 transcript bonus now needs a cue only an ad uses (a URL, a promo
+    code, a sponsor credit, offer small print) besides two sponsor phrases.
+    Song lyrics that say "go to" no longer count.
+  - No bonus when the show talks about itself: Patreon, membership or
+    donation pitches and sign-offs ("thanks for listening", "show notes").
+  - On a clip heard on one show, no bonus over 100 s. Reads that long were
+    in-character bits as often as ads.
+  - A clip heard on several shows loses 15 when its transcript has no sponsor
+    wording and is either sparse (under 2 words a second: music) or the show
+    talking about itself.
+  - The default threshold stays 75.
+
+  Reviewed clips (526; 60% used for tuning, 40% held out), ads cut / keeps cut:
+
+  | Threshold | Tuning set, before | Tuning set, after | Held out, before | Held out, after |
+  |---|---|---|---|---|
+  | 75 | 82 / 1 (recall 51%) | 76 / 0 (48%) | 58 / 0 (54%) | 48 / 0 (44%) |
+  | 80 | 77 / 1 (48%) | 74 / 0 (46%) | 57 / 0 (53%) | 46 / 0 (43%) |
+  | 85 | 53 / 1 (33%) | 51 / 0 (32%) | 37 / 0 (34%) | 35 / 0 (32%) |
+  | 90 | 47 / 1 (29%) | 45 / 0 (28%) | 29 / 0 (27%) | 28 / 0 (26%) |
+
+  Zero keeps cut in 48 held-out auto-approvals bounds the error at 5.3 wrong
+  cuts per 100 (95% confidence). On the 848 clips still pending in the same
+  database copy, 33 reach 75 (was 44). Read by transcript, 8 of the 44 were
+  doubtful and 2 of the 33 are. The reviewed clips hold almost none of the
+  spot-check's failures, so the table shows the cost (recall), and the
+  pending clips show the gain.
+
+### Added
+
+- `scripts/eval_confidence.py`: checks the ad score against the clips you
+  decided, on a read-only copy of the database. It prints the old and new
+  score side by side on a fixed tuning / held-out split, and how many pending
+  clips auto-approve would cut at each threshold.
+
 ## [0.3.3] - 2026-11-03
 
 ### Fixed
