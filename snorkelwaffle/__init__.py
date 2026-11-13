@@ -1,3 +1,3 @@
 """snorkelwaffle: find audio repeated across podcast episodes (ads) and cut it out."""
 
-__version__ = "0.3.3"
+__version__ = "0.4.0"

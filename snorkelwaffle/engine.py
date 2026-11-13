@@ -40,8 +40,6 @@ START_EDGE_ITEMS = 8
 # Only clips this long can earn the transcript bonus, so only these are
 # transcribed (longer ones were mostly in-character bits worth keeping).
 TRANSCRIPT_SECONDS = (20, 130)
-# A clip heard on one show only earns the bonus up to this length.
-ONE_SHOW_READ_SECONDS = 100
 
 ClipRef = namedtuple("ClipRef", "id fp show fp_offset start duration ref_path")
 Occ = namedtuple("Occ", "clip_id s_item e_item start end ber refined")
@@ -775,8 +773,8 @@ def ad_confidence(duration, occ_rows, show_count, ep_count, sugg, transcript=Non
     """0-100: how sure we are a clip is an ad. Drives "confident" auto-approve.
 
     Fitted on 526 hand-reviewed clips (2026-10-28), tightened 2026-11-13 after
-    a spot-check of confident clips found a theme song, an in-character bit
-    and house pitches among them (see CHANGELOG).
+    a spot-check of confident clips found a theme song and house pitches
+    among them (see CHANGELOG).
     Signals, strongest first: heard on several shows with no one show
     dominating (network-inserted); a transcript (optional) that reads like a
     sponsor message; a standard ad length (exact once boundaries are
@@ -810,8 +808,7 @@ def ad_confidence(duration, occ_rows, show_count, ep_count, sugg, transcript=Non
         score -= 15
     lo, hi = TRANSCRIPT_SECONDS
     if transcript and lo <= duration <= hi:
-        # On one show, reads over 100 s were in-character bits as often as ads.
-        if transcribe.is_sponsor_read(transcript) and (network or duration <= ONE_SHOW_READ_SECONDS):
+        if transcribe.is_sponsor_read(transcript):
             score += 35
         elif network and (transcribe.is_house_talk(transcript) or transcribe.words_per_second(
                 transcript, duration) < transcribe.TALK_WORDS_PER_SECOND):

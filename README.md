@@ -34,10 +34,10 @@ run through Whisper (`base.en`, CPU, ~145 MB model downloaded once into
 `/config/models`). A clip whose transcript reads like a sponsor message (a
 URL, promo code or "sponsored by", plus one more sponsor phrase) gets +35 ad
 score. That lets ads heard on one show reach `confident` auto-approve: on 526
-reviewed clips auto-approve catches 46% of ads (26% without transcripts) and
-cut one clip that was marked Keep (a trailer for another podcast). A show's own Patreon or membership pitch,
-a one-show read longer than 100 s, and music heard on two feeds (few words,
-no sponsor wording) all wait for review instead. The transcript is also shown
+reviewed clips auto-approve catches 49% of ads (26% without transcripts) at
+99% precision. A show's own Patreon or membership pitch, its sign-off or
+credits, and music heard on two feeds (few words, no sponsor wording) all
+wait for review instead. The transcript is also shown
 on the clip page. To check the score against your own decisions, run
 `scripts/eval_confidence.py` on a copy of the database.
 
@@ -68,7 +68,7 @@ on the clip page. To check the score against your own decisions, run
 ## Quick start (DockSTARTer)
 
 1. The image is published as `ghcr.io/jlesterak/snorkelwaffle` (amd64 and arm64).
-   Tags: `latest`, `0.2`, `0.2.1` (and earlier versions). Pin a version with `SNORKELWAFFLE_IMAGE` if you prefer.
+   Tags: `latest`, `0.4`, `0.4.0` (and earlier versions). Pin a version with `SNORKELWAFFLE_IMAGE` if you prefer.
 2. Merge [`dockstarter/docker-compose.override.yml`](dockstarter/docker-compose.override.yml)
    into `~/.docker/compose/docker-compose.override.yml`.
 3. Optional: add the variables from [`dockstarter/env.example`](dockstarter/env.example)

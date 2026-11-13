@@ -2,18 +2,11 @@
 
 ## [IN PROGRESS]
 
-- Jake decides whether to set auto-approve to `confident` (still `off`). The
-  ad score was tightened on 2026-11-13 (unreleased, not deployed): see the
-  completed entry below for the numbers. Before deciding:
-  1. Clip 365 (Hey Riddle Riddle, 122 s): its transcript is an in-character
-     Rocket Money read ending in a URL. Similar clips 379 and 415 were marked
-     Ad, 395 and 400 Keep. Decide it; if it is an ad, the 100 s limit on
-     one-show reads (`ONE_SHOW_READ_SECONDS`) can go, which also gets back real
-     ads such as pending clips 130 and 1325.
-  2. Trailers for other podcasts: decided clip 317 (Keep) still scores 90, and
-     pending clip 1547 is the same kind. Other trailers were marked Ad. If
-     they should be kept, the score needs a rule for them.
-  3. Release, deploy, then look at what the Review page lists at 75 or more.
+- Auto-approve `confident` (threshold 75) on the 0.4.0 score: watch the first
+  auto-approved clips on the Review page and undo any that are not ads.
+- Trailers for other podcasts: decided clip 317 (Keep) scores 90, and pending
+  clip 1547 is the same kind. Other trailers were marked Ad. If they should be
+  kept, the score needs a rule for them.
 - Real-episode validation, local copies in `testdata/` of 5 shows × 5
   episodes.
   - Detection, cutting, intro/outro hints and exact boundaries are confirmed.
@@ -37,14 +30,13 @@
 
 ## [COMPLETED]
 
-- [COMPLETED] 2026-11-13: ad score tightened after the 2026-11-11 spot-check
-  (14 ads, 3 wrong, 3 unsure of 20). On the live database, held-out test set
-  (216 reviewed clips) at 75: 47 ads / 1 keep cut, recall 44% (was 57 / 1,
-  53%); all 526: 124 / 1 (was 140 / 2). 2.1 wrong cuts per 100 measured, at
-  most 8.8 at 95% confidence. Spot-check: 14 of 14 ads still reach 75, 0 of
-  the 3 wrong and 0 of the 3 unsure. Pending clips reaching 75: 76 of 1,393
-  (was 98). Threshold stays 75. Eval: `scripts/eval_confidence.py`. See
-  `CHANGELOG.md`.
+- [COMPLETED] 2026-11-13: released v0.4.0, ad score tightened after the
+  2026-11-11 spot-check. On the live database, held-out test set (216 reviewed
+  clips) at 75: 53 ads / 1 keep cut, recall 49% (was 57 / 1, 53%); all 526:
+  132 / 1 (was 140 / 2). 1.9 wrong cuts per 100 measured, at most 7.9 at 95%
+  confidence. Spot-check: 15 of 15 ads reach 75 (clip 365 reviewed as an ad),
+  0 of the 2 wrong and 0 of the 3 unsure. Pending clips reaching 75: 81 of
+  1,393 (was 98). Threshold stays 75. Eval: `scripts/eval_confidence.py`.
 - [COMPLETED] 2026-11-03: `multi_show` auto-approve now requires that no one
   show holds 90%+ of a clip's occurrences (same rule as the ad score).
 - [COMPLETED] 2026-11-03: decided clips keep their counts and ad score after a

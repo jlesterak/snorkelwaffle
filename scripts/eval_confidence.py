@@ -33,7 +33,7 @@ CUT_BER = 0.05
 # 2026-11-11 spot-check (transcripts only, not listened to). A later decision in the database wins.
 SPOT_CHECK = {
     **dict.fromkeys((1427, 1460, 1350, 1351, 1373, 1274, 138, 140, 917, 1911, 1913, 1305, 1601, 1916), "ad"),
-    365: "keep",    # Hey Riddle Riddle in-character bit (a Rocket Money read inside it)
+    365: "ad",      # in-character Rocket Money read; the spot-check doubted it, the reviewer called it an ad
     1639: "keep",   # S-Town theme song
     1630: "keep",   # S-Town theme song
     1533: "unsure",  # cross-promo for another show

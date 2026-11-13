@@ -7,42 +7,41 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-13
+
 ### Changed
 
 - The ad score is stricter about what a transcript proves. A 2026-11-11
-  spot-check of 20 clips scoring 75 or more found 3 that were not ads (a
-  show's closing song heard in two feeds of the same podcast, twice, and an
-  in-character bit) and 3 house pitches. Target: nothing marked Keep is cut on
-  the reviewed clips (precision 99% or better), and none of those six kinds of
-  clip reaches 75.
+  spot-check of 20 clips scoring 75 or more found a show's closing song heard
+  in two feeds of the same podcast (twice) and 3 house pitches. Target:
+  precision of 98% or better on the reviewed clips, and none of those five
+  clips reaches 75.
   - The +35 transcript bonus now needs a cue only an ad uses (a URL, a promo
     code, a sponsor credit, offer small print) besides two sponsor phrases.
     Song lyrics that say "go to" no longer count.
   - No bonus when the show talks about itself: Patreon, membership or
     donation pitches, sign-offs ("thanks for listening", "show notes") and
     credits ("is a production of").
-  - On a clip heard on one show, no bonus over 100 s. Reads that long were
-    in-character bits as often as ads.
   - A clip heard on several shows loses 15 when its transcript has no sponsor
     wording and is either sparse (under 2 words a second: music) or the show
     talking about itself.
   - The default threshold stays 75.
 
   Reviewed clips (526; 60% used for tuning, 40% held out), ads cut / keeps
-  cut, on the live database of 2026-11-13:
+  cut, on a live database of 1,919 clips:
 
   | Threshold | Tuning set, before | Tuning set, after | Held out, before | Held out, after |
   |---|---|---|---|---|
-  | 75 | 83 / 1 (recall 52%) | 77 / 0 (48%) | 57 / 1 (53%) | 47 / 1 (44%) |
-  | 80 | 78 / 1 (49%) | 75 / 0 (47%) | 57 / 1 (53%) | 46 / 1 (43%) |
-  | 85 | 53 / 1 (33%) | 50 / 0 (31%) | 37 / 1 (34%) | 35 / 1 (32%) |
-  | 90 | 47 / 1 (29%) | 44 / 0 (28%) | 29 / 1 (27%) | 28 / 1 (26%) |
+  | 75 | 83 / 1 (recall 52%) | 79 / 0 (49%) | 57 / 1 (53%) | 53 / 1 (49%) |
+  | 80 | 78 / 1 (49%) | 76 / 0 (48%) | 57 / 1 (53%) | 52 / 1 (48%) |
+  | 85 | 53 / 1 (33%) | 51 / 0 (32%) | 37 / 1 (34%) | 35 / 1 (32%) |
+  | 90 | 47 / 1 (29%) | 45 / 0 (28%) | 29 / 1 (27%) | 28 / 1 (26%) |
 
   The one held-out keep still cut is a 60 s trailer for another podcast heard
-  on two shows; other such trailers were marked Ad. That is 2.1 wrong cuts per
-  100 auto-approvals measured, 8.8 at most (95% confidence). Of the 20
-  spot-check clips, all 14 ads still reach 75 and none of the 3 wrong or 3
-  unsure ones do (all six scored 80 before). Of 1,393 pending clips, 76 reach
+  on two shows; other such trailers were marked Ad. That is 1.9 wrong cuts per
+  100 auto-approvals measured, 7.9 at most (95% confidence). Of the 20
+  spot-check clips, all 15 ads still reach 75 and none of the 2 wrong or 3
+  unsure ones do (all five scored 80 before). Of 1,393 pending clips, 81 reach
   75 (was 98).
 
 ### Added
@@ -227,7 +226,8 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 - Released under the Unlicense, with credits for prior art (MinusPod and
   others).
 
-[Unreleased]: https://github.com/jlesterak/snorkelwaffle/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/jlesterak/snorkelwaffle/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/jlesterak/snorkelwaffle/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/jlesterak/snorkelwaffle/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/jlesterak/snorkelwaffle/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/jlesterak/snorkelwaffle/compare/v0.3.0...v0.3.1

@@ -93,7 +93,7 @@ class TranscriptTest(unittest.TestCase):
         self.assertLess(ad_confidence(200.0, rows, 1, 3, None, ad), 75)
         self.assertEqual(ad_confidence(30.0, rows, 1, 3, {"kind": "theme"}, ad), 5)
 
-    # The next four are the wrong or doubtful "confident" clips from the 2026-11-11 spot-check.
+    # The next four come from the 2026-11-11 spot-check of "confident" clips.
     @staticmethod
     def _rows(seconds, shows, n=6):
         return [{"start": 600 + 700 * i, "end": 600 + 700 * i + seconds, "duration": 3600, "ber": 0.04, "id": i,
@@ -124,13 +124,14 @@ class TranscriptTest(unittest.TestCase):
         self.assertFalse(is_sponsor_read(lyrics))
         self.assertLess(ad_confidence(30.0, self._rows(30.0, ["Own"]), 1, 6, None, lyrics), 75)
 
-    def test_long_one_show_read_waits_for_review(self):
-        # Clip 365: a 122 s in-character bit with a sponsor read inside it.
+    def test_in_character_sponsor_read_is_an_ad(self):
+        # Clip 365: a 122 s in-character bit around a sponsor read. Reviewed as an ad (2026-11-13).
         from snorkelwaffle.engine import ad_confidence
         bit = ("Well guys, I gotta go, I'm taking my new best friend out to a very fancy dinner because I saved a "
                "bunch of money. Join at budgetbear.com. That's budgetbear.com slash riddle. Let the bear pay.")
-        self.assertLess(ad_confidence(122.0, self._rows(122.0, ["Own"]), 1, 6, None, bit), 75)
-        self.assertGreaterEqual(ad_confidence(60.0, self._rows(60.0, ["Own"]), 1, 6, None, bit), 75)
+        self.assertGreaterEqual(ad_confidence(122.0, self._rows(122.0, ["Own"]), 1, 6, None, bit), 75)
+        # Past the transcript range it still waits for review.
+        self.assertLess(ad_confidence(200.0, self._rows(200.0, ["Own"]), 1, 6, None, bit), 75)
 
     def test_house_pitch_is_not_a_sponsor_read(self):
         # Clips 1518 and 1782: the show's own Patreon or membership appeal, also when a sponsor read follows it.
