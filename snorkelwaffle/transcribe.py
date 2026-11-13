@@ -32,10 +32,10 @@ SPONSOR_CUES = re.compile(r"(\.com|\.org|\bdot (com|org)\b|\bslash\b|\bpromo\b|\
                           r"\bfree trial\b|\bfree shipping\b)", re.IGNORECASE)
 # A show talking about itself uses the same URL-and-sign-up wording as a
 # sponsor: a Patreon, membership or donation pitch, or its sign-off ("thanks
-# for listening ... show notes at ..."). Those wait for review.
+# for listening ... show notes at ...", "is a production of"). Those wait for review.
 HOUSE_WORDS = re.compile(r"\b(patreon|support the show|listener[- ]supported|donations?|membership|"
                          r"bonus (episodes?|room|content)|discord|thank(s| you)( so much)? for listening|"
-                         r"show notes|on this episode|that's all for)\b", re.IGNORECASE)
+                         r"show notes|on this episode|that's all for|is a production of)\b", re.IGNORECASE)
 # Ads are dense talk: 90% of reviewed ads ran at 2.2+ words a second. Songs and
 # stings transcribe to far fewer words.
 TALK_WORDS_PER_SECOND = 2.0

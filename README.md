@@ -35,7 +35,7 @@ run through Whisper (`base.en`, CPU, ~145 MB model downloaded once into
 URL, promo code or "sponsored by", plus one more sponsor phrase) gets +35 ad
 score. That lets ads heard on one show reach `confident` auto-approve: on 526
 reviewed clips auto-approve catches 46% of ads (26% without transcripts) and
-cut nothing that was marked Keep. A show's own Patreon or membership pitch,
+cut one clip that was marked Keep (a trailer for another podcast). A show's own Patreon or membership pitch,
 a one-show read longer than 100 s, and music heard on two feeds (few words,
 no sponsor wording) all wait for review instead. The transcript is also shown
 on the clip page. To check the score against your own decisions, run

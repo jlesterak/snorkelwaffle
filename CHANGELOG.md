@@ -19,7 +19,8 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
     code, a sponsor credit, offer small print) besides two sponsor phrases.
     Song lyrics that say "go to" no longer count.
   - No bonus when the show talks about itself: Patreon, membership or
-    donation pitches and sign-offs ("thanks for listening", "show notes").
+    donation pitches, sign-offs ("thanks for listening", "show notes") and
+    credits ("is a production of").
   - On a clip heard on one show, no bonus over 100 s. Reads that long were
     in-character bits as often as ads.
   - A clip heard on several shows loses 15 when its transcript has no sponsor
@@ -27,21 +28,22 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
     talking about itself.
   - The default threshold stays 75.
 
-  Reviewed clips (526; 60% used for tuning, 40% held out), ads cut / keeps cut:
+  Reviewed clips (526; 60% used for tuning, 40% held out), ads cut / keeps
+  cut, on the live database of 2026-11-13:
 
   | Threshold | Tuning set, before | Tuning set, after | Held out, before | Held out, after |
   |---|---|---|---|---|
-  | 75 | 82 / 1 (recall 51%) | 76 / 0 (48%) | 58 / 0 (54%) | 48 / 0 (44%) |
-  | 80 | 77 / 1 (48%) | 74 / 0 (46%) | 57 / 0 (53%) | 46 / 0 (43%) |
-  | 85 | 53 / 1 (33%) | 51 / 0 (32%) | 37 / 0 (34%) | 35 / 0 (32%) |
-  | 90 | 47 / 1 (29%) | 45 / 0 (28%) | 29 / 0 (27%) | 28 / 0 (26%) |
+  | 75 | 83 / 1 (recall 52%) | 77 / 0 (48%) | 57 / 1 (53%) | 47 / 1 (44%) |
+  | 80 | 78 / 1 (49%) | 75 / 0 (47%) | 57 / 1 (53%) | 46 / 1 (43%) |
+  | 85 | 53 / 1 (33%) | 50 / 0 (31%) | 37 / 1 (34%) | 35 / 1 (32%) |
+  | 90 | 47 / 1 (29%) | 44 / 0 (28%) | 29 / 1 (27%) | 28 / 1 (26%) |
 
-  Zero keeps cut in 48 held-out auto-approvals bounds the error at 5.3 wrong
-  cuts per 100 (95% confidence). On the 848 clips still pending in the same
-  database copy, 33 reach 75 (was 44). Read by transcript, 8 of the 44 were
-  doubtful and 2 of the 33 are. The reviewed clips hold almost none of the
-  spot-check's failures, so the table shows the cost (recall), and the
-  pending clips show the gain.
+  The one held-out keep still cut is a 60 s trailer for another podcast heard
+  on two shows; other such trailers were marked Ad. That is 2.1 wrong cuts per
+  100 auto-approvals measured, 8.8 at most (95% confidence). Of the 20
+  spot-check clips, all 14 ads still reach 75 and none of the 3 wrong or 3
+  unsure ones do (all six scored 80 before). Of 1,393 pending clips, 76 reach
+  75 (was 98).
 
 ### Added
 

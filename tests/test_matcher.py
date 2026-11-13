@@ -144,7 +144,10 @@ class TranscriptTest(unittest.TestCase):
         signoff = ("Thank you for listening to the Island Spanish podcast. To get access to show notes for all of "
                    "our lessons, visit islandspanish.com and sign up so you hear about it every time a new lesson "
                    "is available. We will see you in the next one, and until then keep practising every day.")
-        for text in (patreon, fused, signoff):
+        # A show's closing credits (pending clips 1420, 1568).
+        credits = ("Our Show is a production of Big Network Media. For more podcasts from Big Network, visit "
+                   "bignetwork.com, or find us in the app, on Apple Podcasts, or wherever you get your podcasts.")
+        for text in (patreon, fused, signoff, credits):
             self.assertFalse(is_sponsor_read(text))
             self.assertLess(ad_confidence(43.0, self._rows(43.0, ["Own"]), 1, 6, None, text), 75)
         rows = self._rows(43.0, ["Island Spanish", "Sister Feed"])
